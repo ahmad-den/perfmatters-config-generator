@@ -1,0 +1,356 @@
+{
+  "universal": {
+    "delay_js_exclusions": [
+      "window.dataLayer",
+      "gtag",
+      "googletagmanager",
+      "gtm"
+    ]
+  },
+  "plugins": {
+    "borlabs-cookie": {
+      "delay_js_exclusions": [
+        "borlabs-cookie",
+        "BorlabsCookie",
+        "jquery.min.js"
+      ]
+    },
+    "calculated-fields-form": {
+      "delay_js_exclusions": [
+        "jquery.min.js",
+        "/wp-content/plugins/calculated-fields-form/",
+        "cp_calculatedfields"
+      ]
+    },
+    "complianz-gdpr": {
+      "delay_js_exclusions": [
+        "complianz"
+      ]
+    },
+    "convertkit": {
+      "delay_js_exclusions": [
+        "convertkit-js"
+      ]
+    },
+    "cookiebot": {
+      "delay_js_exclusions": [
+        "consent.cookiebot.com"
+      ]
+    },
+    "convertpro": {
+      "delay_js_exclusions": [
+        "cp-popup-script-js"
+      ]
+    },
+    "cookie-law-info": {
+      "delay_js_exclusions": [
+        "/wp-content/plugins/cookie-law-info/legacy/public/js/cookie-law-info-public.js",
+        "cookie-law-info-js",
+        "jquery.min.js"
+      ]
+    },
+    "cookie-notice": {
+      "delay_js_exclusions": [
+        "/wp-content/plugins/cookie-notice/js/front.min.js",
+        "cnArgs"
+      ]
+    },
+    "elementor": {
+      "delay_js_exclusions": [
+        "jquery.min.js",
+        "jquery.smartmenus.min.js",
+        "webpack.runtime.min.js",
+        "webpack-pro.runtime.min.js",
+        "frontend.min.js",
+        "frontend-modules.min.js",
+        "elements-handlers.min.js",
+        "elementorFrontendConfig",
+        "ElementorProFrontendConfig",
+        "imagesloaded.min.js",
+        "/wp-includes/js/dist/hooks.min.js",
+        "/wp-includes/js/dist/i18n.min.js",
+        "/wp-content/plugins/elementor/assets/lib/waypoints/waypoints.min.js"
+      ]
+    },
+    "fluentform": {
+      "delay_js_exclusions": [
+        "/wp-content/plugins/fluentform/",
+        "fluentForm",
+        "turnstile"
+      ]
+    },
+    "gdpr-cookie-compliance": {
+      "delay_js_exclusions": [
+        "/wp-content/plugins/gdpr-cookie-compliance/",
+        "moove_gdpr",
+        "jquery.min.js"
+      ]
+    },
+    "gravityforms": {
+      "delay_js_exclusions": [
+        "/wp-includes/js/jquery/jquery.min.js",
+        "recaptcha",
+        "/gravityforms/",
+        "gform",
+        "/wp-includes/js/plupload/plupload.min.js",
+        "/wp-includes/js/plupload/moxie.min.js",
+        "/wp-includes/js/jquery/jquery-migrate.min.js",
+        "/gravityforms/js/conditional_logic.min.js",
+        "jquery-ui-datepicker-js",
+        "jquery-ui-datepicker-js-after"
+      ]
+    },
+    "jetmenu": {
+      "delay_js_exclusions": [
+        "jquery.min.js",
+        "jquery-migrate.min.js",
+        "/elementor-pro/",
+        "/elementor/",
+        "/jet-blog/assets/js/lib/slick/slick.min.js",
+        "/jet-elements/",
+        "/jet-menu/",
+        "elementorFrontendConfig",
+        "ElementorProFrontendConfig",
+        "hasJetBlogPlaylist",
+        "JetEngineSettings",
+        "jetMenuPublicSettings"
+      ]
+    },
+    "lightweight-cookie-notice-free": {
+      "delay_js_exclusions": [
+        "/wp-content/lightweight-cookie-notice-free/public/assets/js/production/general.js",
+        "daextlwcnf-general-js-after",
+        "daextlwcnf-general-js",
+        "cookieNotice"
+      ]
+    },
+    "ninja-forms": {
+      "delay_js_exclusions": [
+        "/wp-includes/js/underscore.min.js",
+        "/wp-includes/js/backbone.min.js",
+        "/ninja-forms/assets/js/min/front-end-deps.js",
+        "/ninja-forms/assets/js/min/front-end.js",
+        "nfForms",
+        "nf-",
+        "jquery.min.js"
+      ]
+    },
+    "presto-player": {
+      "delay_js_exclusions": [
+        "/presto-player/dist/components/web-components/web-components.esm.js",
+        "/presto-player/src/player/player-static.js",
+        "var player",
+        "/wp-includes/js/dist/vendor/regenerator-runtime.min.js",
+        "/wp-includes/js/dist/api-fetch.min.js",
+        "/wp-includes/js/dist/hooks.min.js"
+      ]
+    },
+    "real-cookie-banner": {
+      "delay_js_exclusions": [
+        "/wp-content/plugins/vendor-banner.pro.js",
+        "/wp-content/plugins/banner.pro.js",
+        "realCookieBanner",
+        "real-cookie-banner-pro-banner-js-before"
+      ]
+    },
+    "revslider": {
+      "delay_js_exclusions": [
+        "jquery.min.js",
+        "jquery-migrate.min.js",
+        "revslider",
+        "rev_slider",
+        "setREVStartSize",
+        "window.RS_MODULES"
+      ]
+    },
+    "shortpixel": {
+      "delay_js_exclusions": [
+        "shortpixel.ai/assets/js/bundles/spai-lib"
+      ]
+    },
+    "smart-slider-3": {
+      "delay_js_exclusions": [
+        "/smart-slider-3/",
+        "_N2"
+      ]
+    },
+    "nextend-smart-slider3-pro": {
+      "delay_js_exclusions": [
+        "/nextend-smart-slider3-pro/",
+        "_N2"
+      ]
+    },
+    "surecart": {
+      "delay_js_exclusions": [
+        "jquery.min.js",
+        "surecart",
+        "hooks.min.js",
+        "i18n.min.js"
+      ]
+    },
+    "termageddon-usercentrics": {
+      "delay_js_exclusions": [
+        "jquery.min.js",
+        "termageddon",
+        "usercentrics",
+        "UC_UI"
+      ]
+    },
+    "woocommerce": {
+      "delay_js_exclusions": [
+        "jquery.min.js",
+        "flexslider",
+        "single-product.min.js",
+        "slick",
+        "functions.min.js",
+        "waypoint",
+        "woocommerce-no-js",
+        "wc-cart-fragments-js",
+        "woocommerce-js"
+      ]
+    },
+    "wpdiscuz": {
+      "delay_js_exclusions": [
+        "/wp-content/plugins/wpdiscuz/",
+        "wpdiscuzAjaxObj",
+        "wpdiscuzEditorOptions",
+        "wpdiscuzUCObj",
+        "jquery.min.js"
+      ]
+    },
+    "ws-form": {
+      "delay_js_exclusions": [
+        "jquery.min.js",
+        "jquery/ui",
+        "ws-form",
+        "wsf-wp-footer",
+        "quicktags-js"
+      ]
+    },
+    "wp-recipe-maker": {
+      "delay_js_exclusions": [
+        "wprm-public-js",
+        "wprmp-public-js"
+      ]
+    },
+    "sheknows-infuse": {
+      "delay_js_exclusions": [
+        "blogherads"
+      ]
+    },
+    "add-to-any": {
+      "delay_js_exclusions": [
+        "addtoany-jquery-js",
+        "static.addtoany.com"
+      ]
+    },
+    "the-events-calendar": {
+      "delay_js_exclusions": [
+        "tribe-common-js",
+        "underscore-js",
+        "tribe-events-views-v2-datepicker-js",
+        "jquery-core-js",
+        "tribe-events-views-v2-events-bar-js",
+        "tribe-events-views-v2-bootstrap-datepicker-js",
+        "tribe-events-views-v2-breakpoints-js",
+        "tribe-events-views-v2-manager-js"
+      ]
+    },
+    "gp-advanced-phone-field": {
+      "delay_js_exclusions": [
+        "gp-advanced-phone-field-js"
+      ]
+    },
+    "thrive-visual-editor": {
+      "delay_js_exclusions": [
+        "tve_frontend_menu-js"
+      ]
+    }
+  },
+  "themes": {
+    "astra": {
+      "delay_js_exclusions": [
+        "jquery.min.js",
+        "astra"
+      ]
+    },
+    "avada": {
+      "delay_js_exclusions": [
+        "avada-header.js",
+        "modernizr.js",
+        "jquery.easing.js",
+        "avadaHeaderVars"
+      ]
+    },
+    "bricks": {
+      "delay_js_exclusions": [
+        "/wp-content/themes/bricks/assets/js/libs/swiper.min.js",
+        "/wp-content/themes/bricks/assets/js/bricks.min.js",
+        "bricks-scripts-js"
+      ]
+    },
+    "kadence": {
+      "delay_js_exclusions": [
+        "kadence_page_transitions_js-js",
+        "kadence-navigation-js"
+      ]
+    },
+    "divi": {
+      "delay_js_exclusions": [
+        "jquery.min.js",
+        "/Divi/js/scripts.min.js",
+        "et_pb_custom",
+        "elm.style.display",
+        "jquery-migrate.min.js",
+        ".dipi_preloader_wrapper_outer",
+        "/Divi/js/custom.unified.js",
+        "/js/magnific-popup.js",
+        "et_animation_data",
+        "var DIVI",
+        "easypiechart.js"
+      ]
+    },
+    "generatepress": {
+      "delay_js_exclusions": [
+        "generateBlog",
+        "scripts.min.js",
+        "masonry.min.js",
+        "imagesloaded.min.js",
+        "/generatepress/assets/js/menu.min.js",
+        "generatepressMenu",
+        "offside.min.js",
+        "offSide"
+      ]
+    },
+    "newspaper": {
+      "delay_js_exclusions": [
+        "jquery.min.js",
+        "jquery-migrate.min.js",
+        "tagdiv_theme.min.js",
+        "tdBlocksArray"
+      ]
+    },
+    "oceanwp": {
+      "delay_js_exclusions": [
+        "drop-down-mobile-menu.min.js",
+        "oceanwpLocalize",
+        "jquery.min.js",
+        "aos.js",
+        "oxygen-aos-enabled"
+      ]
+    },
+    "salient": {
+      "delay_js_exclusions": [
+        "jquery.min.js",
+        "jquery-migrate.min.js",
+        "/salient/",
+        "/salient-nectar-slider/js/nectar-slider.js"
+      ]
+    },
+    "foodiepro": {
+      "delay_js_exclusions": [
+        "foodie-pro-general-js"
+      ]
+    }
+  }
+}

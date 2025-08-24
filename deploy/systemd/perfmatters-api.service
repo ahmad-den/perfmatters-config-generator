@@ -1,0 +1,29 @@
+[Unit]
+Description=Perfmatters Configuration Generator API
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/perfmatters-api
+Environment=PATH=/var/www/perfmatters-api/venv/bin
+Environment=HOST=127.0.0.1
+Environment=PORT=8080
+Environment=DEBUG=False
+Environment=FLASK_ENV=production
+ExecStart=/var/www/perfmatters-api/venv/bin/gunicorn -c gunicorn.conf.py app:app
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=always
+RestartSec=10
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/www/perfmatters-api/logs
+ReadWritePaths=/tmp
+
+[Install]
+WantedBy=multi-user.target

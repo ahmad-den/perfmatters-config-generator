@@ -1,0 +1,192 @@
+{
+  "universal": {
+    "rucss_excluded_stylesheets": [
+      "wp-block-library-css"
+    ]
+  },
+  "plugins": {
+    "wp-recipe-maker": {
+      "rucss_excluded_stylesheets": [
+        "wprm-public-css"
+      ]
+    },
+    "wp-recipe-maker-pro": {
+      "rucss_excluded_stylesheets": [
+        "wprmp-public-css"
+      ]
+    },
+    "events-manager": {
+      "rucss_excluded_stylesheets": [
+        "events-manager-css"
+      ]
+    },
+    "social-pug": {
+      "rucss_excluded_stylesheets": [
+        "dpsp-frontend-style-pro-css"
+      ]
+    },
+    "woocommerce": {
+      "rucss_excluded_stylesheets": [
+        "wc-blocks-style-css",
+        "woocommerce-general-css",
+        "brands-styles-css",
+        "woocommerce-layout-css",
+        "woocommerce-smallscreen-css"
+      ]
+    },
+    "woocommerce-paypal-payments": {
+      "rucss_excluded_stylesheets": [
+        "wc-ppcp-googlepay-css"
+      ]
+    },
+    "elementor": {
+      "rucss_excluded_stylesheets": [
+        "elementor-frontend-css",
+        "widget-heading-css",
+        "widget-google_maps-css"
+      ]
+    },
+    "wooswipe": {
+      "rucss_excluded_stylesheets": [
+        "wooswipe-"
+      ]
+    },
+    "booster-plus-for-woocommerce": {
+      "rucss_excluded_stylesheets": [
+        "jquery-ui-style-css"
+      ]
+    },
+    "pinterest-for-woocommerce": {
+      "rucss_excluded_stylesheets": [
+        "pinterest-for-woocommerce-pins-css"
+      ]
+    },
+    "imark-interactive-toolkit": {
+      "rucss_excluded_stylesheets": [
+        "inc-frontend-css",
+        "imp-frontend-css"
+      ]
+    },
+    "jetpack": {
+      "rucss_excluded_stylesheets": [
+        "jetpack_related-posts-css"
+      ]
+    },
+    "convertkit": {
+      "rucss_excluded_stylesheets": [
+        "convertkit-form-css"
+      ]
+    },
+    "back-in-stock-notifier-for-woocommerce": {
+      "rucss_excluded_stylesheets": [
+        "cwginstock_bootstrap-css"
+      ]
+    },
+    "social-icons-widget-by-wpzoom": {
+      "rucss_excluded_stylesheets": [
+        "wpzoom-social-icons-styles-css",
+        "wpzoom-social-icons-socicon-css"
+      ]
+    },
+    "essential-addons-for-elementor-lite": {
+      "rucss_excluded_stylesheets": [
+        "eael-general-css"
+      ]
+    },
+    "kadence-blocks": {
+      "rucss_excluded_stylesheets": [
+        "kadence-blocks-infobox-css"
+      ]
+    },
+    "add-to-any": {
+      "rucss_excluded_stylesheets": [
+        "addtoany-css"
+      ]
+    },
+    "dco-comment-attachment": {
+      "rucss_excluded_stylesheets": [
+        "dco-comment-attachment-css"
+      ]
+    }
+  },
+  "themes": {
+    "kadence": {
+      "rucss_excluded_stylesheets": [
+        "wprm-public-css",
+        "kadence-header-css",
+        "kadence-content-css",
+        "kadence-global-css",
+        "kad-splide-css",
+        "kadence-related-posts-css"
+      ]
+    },
+    "blog-pack": {
+      "rucss_excluded_stylesheets": [
+        "blog-pack-frontend-style-css",
+        "blog-pack-editor-frontend-style-css"
+      ]
+    },
+    "restored316-limoncella": {
+      "rucss_excluded_stylesheets": [
+        "limoncella-style-css"
+      ]
+    },
+    "bootscore-main": {
+      "rucss_excluded_stylesheets": [
+        "bootstrap-css"
+      ]
+    },
+    "bootscore-child-main": {
+      "rucss_excluded_stylesheets": [
+        "bootscore-style-css"
+      ]
+    },
+    "ashe-pro-premium": {
+      "rucss_excluded_stylesheets": [
+        "slick-css",
+        "ashe-style-css",
+        "ashe-responsive-css",
+        "ashe-woocommerce-css"
+      ]
+    },
+    "hayes": {
+      "rucss_excluded_stylesheets": [
+        "hayes-styles-css",
+        "hayes-elements-css"
+      ]
+    },
+    "foodiepro": {
+      "rucss_excluded_stylesheets": [
+        "foodie-pro-theme-css",
+        "custom-styling-css"
+      ]
+    },
+    "thrive": {
+      "rucss_excluded_stylesheets": [
+        "thrive"
+      ]
+    },
+    "foodiepro5": {
+      "rucss_excluded_stylesheets": [
+        "foodie-pro-5-css"
+      ]
+    },
+    "generatepress": {
+      "rucss_excluded_stylesheets": [
+        "generate-style"
+      ]
+    },
+    "bunchpro": {
+      "rucss_excluded_stylesheets": [
+        "brunch-pro-theme-css"
+      ]
+    },
+    "hello-elementor": {
+      "rucss_excluded_stylesheets": [
+        "hello-elementor-css",
+        "hello-elementor-theme-style-css",
+        "hello-elementor-header-footer-css"
+      ]
+    }
+  }
+}
