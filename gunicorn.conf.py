@@ -16,8 +16,8 @@ max_requests = 1000
 max_requests_jitter = 50
 
 # Logging
-accesslog = '/var/www/perfmatters-api/logs/access.log'
-errorlog = '/var/www/perfmatters-api/logs/error.log'
+accesslog = '/opt/perfmatters-api/logs/access.log'
+errorlog = '/opt/perfmatters-api/logs/error.log'
 loglevel = 'info'
 access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
 
@@ -26,7 +26,7 @@ proc_name = 'perfmatters-config-api'
 
 # Server mechanics
 daemon = False
-pidfile = '/var/www/perfmatters-api/logs/gunicorn.pid'
+pidfile = '/opt/perfmatters-api/logs/gunicorn.pid'
 tmp_upload_dir = None
 
 # SSL (if needed)

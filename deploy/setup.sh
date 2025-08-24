@@ -9,7 +9,7 @@ echo "🚀 Setting up Perfmatters API for production..."
 
 # Variables
 DOMAIN="perfmatters.checkmysite.app"
-APP_DIR="/var/www/perfmatters-api"
+APP_DIR="/opt/perfmatters-api"
 NGINX_CONF="/etc/nginx/sites-available/$DOMAIN"
 NGINX_ENABLED="/etc/nginx/sites-enabled/$DOMAIN"
 

@@ -5,7 +5,7 @@
 
 set -e
 
-APP_DIR="/var/www/perfmatters-api"
+APP_DIR="/opt/perfmatters-api"
 
 echo "🔄 Updating Perfmatters API..."
 
