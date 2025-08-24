@@ -1,23 +1,17 @@
 #!/bin/bash
 
-# WordPress Perfmatters Configuration Generator
-# This script fetches your WordPress plugins and themes, then generates Perfmatters config
-
 set -e
 
-# Configuration
 API_URL="https://perfmatters.checkmysite.app"
 SITE_URL=""
 ANALYZE_DOMAIN=true
 
-# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Function to print colored output
 print_status() {
     echo -e "${BLUE}[INFO]${NC} $1"
 }
@@ -34,7 +28,6 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Function to show usage
 show_usage() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
@@ -49,7 +42,6 @@ show_usage() {
     echo "  $0 -u http://localhost:8080  Use local API"
 }
 
-# Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
         -u|--api-url)
@@ -68,7 +60,6 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Function to check if WP-CLI is available
 check_wp_cli() {
     if ! command -v wp &> /dev/null; then
         print_error "WP-CLI is not installed or not in PATH"
@@ -76,7 +67,6 @@ check_wp_cli() {
         exit 1
     fi
     
-    # Check if we're in a WordPress directory
     if ! wp core is-installed --allow-root --skip-plugins --skip-themes --quiet 2>/dev/null; then
         print_error "Not in a WordPress directory or WordPress not installed"
         print_error "Please run this script from your WordPress root directory"
@@ -86,7 +76,6 @@ check_wp_cli() {
     print_success "WP-CLI found and WordPress detected"
 }
 
-# Function to get site URL
 get_site_url() {
     SITE_URL=$(wp option get siteurl --allow-root --skip-plugins --skip-themes 2>/dev/null || wp option get home --allow-root --skip-plugins --skip-themes 2>/dev/null || echo "")
     if [ -n "$SITE_URL" ]; then
@@ -96,11 +85,9 @@ get_site_url() {
     fi
 }
 
-# Function to get active plugins
 get_active_plugins() {
     print_status "Fetching active plugins..."
     
-    # Get active plugins (exclude mu-plugins)
     local plugins_raw=$(wp plugin list --status=active --field=name --format=csv --allow-root --skip-plugins --skip-themes 2>/dev/null || echo "")
     
     if [ -z "$plugins_raw" ]; then
@@ -109,7 +96,6 @@ get_active_plugins() {
         return
     fi
     
-    # Convert to JSON array
     local plugins_json="["
     local first=true
     
@@ -132,11 +118,9 @@ get_active_plugins() {
     echo "$plugins_json"
 }
 
-# Function to get active theme and parent theme
 get_themes() {
     print_status "Fetching active theme..."
     
-    # Get active theme
     local active_theme=$(wp theme list --status=active --field=name --format=csv --allow-root --skip-plugins --skip-themes 2>/dev/null | head -1)
     
     if [ -z "$active_theme" ]; then
@@ -147,19 +131,16 @@ get_themes() {
     
     print_success "Active theme: $active_theme"
     
-    # Check if it's a child theme and get parent
     local parent_theme=$(wp theme get "$active_theme" --field=parent --allow-root --skip-plugins --skip-themes 2>/dev/null || echo "")
     
     if [ -n "$parent_theme" ] && [ "$parent_theme" != "false" ]; then
         print_success "Parent theme detected: $parent_theme"
-        # Return parent theme as it's more important for optimizations
         echo "$parent_theme"
     else
         echo "$active_theme"
     fi
 }
 
-# Function to call the API
 call_api() {
     local plugins_json="$1"
     local theme="$2"
@@ -167,7 +148,6 @@ call_api() {
     print_status "Calling Perfmatters API..."
     print_status "API URL: $API_URL"
     
-    # Build JSON payload
     local json_payload="{\"plugins\": $plugins_json, \"theme\": \"$theme\""
     
     if [ "$ANALYZE_DOMAIN" = true ] && [ -n "$SITE_URL" ]; then
@@ -177,13 +157,11 @@ call_api() {
     
     json_payload="$json_payload}"
     
-    # Generate filename
     local timestamp=$(date +%Y%m%d-%H%M%S)
     local filename="perfmatters-config-$timestamp.json"
     
     print_status "Sending request to API..."
     
-    # Make API call
     local response=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/generate-config" \
         -H "Content-Type: application/json" \
         -d "$json_payload" \
@@ -195,7 +173,6 @@ call_api() {
         print_success "Configuration generated successfully!"
         print_success "File saved as: $filename"
         
-        # Show file size
         local file_size=$(ls -lh "$filename" | awk '{print $5}')
         print_status "File size: $file_size"
         
@@ -209,7 +186,6 @@ call_api() {
     else
         print_error "API call failed with HTTP code: $http_code"
         
-        # Try to show error message if file contains JSON error
         if [ -f "$filename" ]; then
             local error_msg=$(cat "$filename" 2>/dev/null | grep -o '"error":"[^"]*"' | cut -d'"' -f4 2>/dev/null || echo "")
             if [ -n "$error_msg" ]; then
@@ -221,7 +197,6 @@ call_api() {
     fi
 }
 
-# Function to test API connectivity
 test_api() {
     print_status "Testing API connectivity..."
     
@@ -238,21 +213,17 @@ test_api() {
     fi
 }
 
-# Main execution
 main() {
     echo "🚀 WordPress Perfmatters Configuration Generator"
     echo "================================================"
     echo ""
     
-    # Check prerequisites
     check_wp_cli
     
-    # Test API connectivity
     if ! test_api; then
         exit 1
     fi
     
-    # Get WordPress data
     get_site_url
     
     local plugins_json=$(get_active_plugins)
@@ -265,7 +236,6 @@ main() {
     echo "  Domain analysis: enabled (always)"
     echo ""
     
-    # Confirm before proceeding
     read -p "Generate Perfmatters configuration? (y/N): " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -273,9 +243,7 @@ main() {
         exit 0
     fi
     
-    # Call API
     call_api "$plugins_json" "$theme"
 }
 
-# Run main function
 main "$@"
