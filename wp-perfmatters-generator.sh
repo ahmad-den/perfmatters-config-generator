@@ -2,34 +2,29 @@
 
 set -e
 
-# Configuration
 API_URL="https://perfmatters.checkmysite.app"
-WP_FLAGS="--allow-root --skip-plugins --skip-themes --quiet"
-
-# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m'
 
-# Output functions
 print_status() { echo -e "${BLUE}[INFO]${NC} $1"; }
-print_success() { echo -e "${GREEN}[OK]${NC} $1"; }
-print_warning() { echo -e "${YELLOW}[WARN]${NC} $1"; }
-print_error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
+print_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
+print_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
+print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
 check_requirements() {
-    command -v wp >/dev/null || print_error "WP-CLI not found"
-    wp core is-installed $WP_FLAGS 2>/dev/null || print_error "WordPress not found"
-    curl -sf "$API_URL/health" >/dev/null || print_error "API unreachable"
+    command -v wp >/dev/null || { print_error "WP-CLI not found"; exit 1; }
+    wp core is-installed --quiet 2>/dev/null || { print_error "WordPress not found"; exit 1; }
+    curl -sf "$API_URL/health" >/dev/null || { print_error "API unreachable"; exit 1; }
 }
 
 get_wp_data() {
-    local site_url=$(wp option get siteurl $WP_FLAGS 2>/dev/null || echo "")
-    local plugins=$(wp plugin list --status=active --field=name --format=json $WP_FLAGS 2>/dev/null || echo "[]")
-    local theme=$(wp theme list --status=active --field=name --format=csv $WP_FLAGS 2>/dev/null | head -1)
-    local parent=$(wp theme get "$theme" --field=parent $WP_FLAGS 2>/dev/null || echo "false")
+    local site_url=$(wp option get siteurl 2>/dev/null || echo "")
+    local plugins=$(wp plugin list --status=active --field=name --format=json 2>/dev/null || echo "[]")
+    local theme=$(wp theme list --status=active --field=name --format=csv 2>/dev/null | head -1)
+    local parent=$(wp theme get "$theme" --field=parent 2>/dev/null || echo "false")
     
     [ "$parent" != "false" ] && theme="$parent"
     
