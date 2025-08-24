@@ -42,6 +42,8 @@ show_usage() {
     echo "  -u, --api-url URL       Custom API URL (default: https://perfmatters.checkmysite.app)"
     echo "  -h, --help              Show this help message"
     echo ""
+    echo "Note: Domain analysis is always enabled for ad detection"
+    echo ""
     echo "Examples:"
     echo "  $0                      Generate config with ad detection"
     echo "  $0 -u http://localhost:8080  Use local API"
