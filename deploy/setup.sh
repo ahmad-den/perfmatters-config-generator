@@ -49,6 +49,10 @@ nginx -t
 # Install systemd service
 echo "⚙️  Installing systemd service..."
 cp deploy/systemd/perfmatters-api.service /etc/systemd/system/
+
+# Update systemd service file with correct paths
+sed -i "s|/opt/perfmatters-api|$APP_DIR|g" /etc/systemd/system/perfmatters-api.service
+
 systemctl daemon-reload
 systemctl enable perfmatters-api
 

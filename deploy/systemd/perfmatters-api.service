@@ -6,13 +6,13 @@ After=network.target
 Type=simple
 User=www-data
 Group=www-data
-WorkingDirectory=/opt/perfmatters-api
-Environment=PATH=/opt/perfmatters-api/venv/bin
+WorkingDirectory=/var/www/perfmatters-api
+Environment=PATH=/var/www/perfmatters-api/venv/bin
 Environment=HOST=127.0.0.1
 Environment=PORT=8080
 Environment=DEBUG=False
 Environment=FLASK_ENV=production
-ExecStart=/opt/perfmatters-api/venv/bin/gunicorn -c gunicorn.conf.py app:app
+ExecStart=/var/www/perfmatters-api/venv/bin/gunicorn -c gunicorn.conf.py app:app
 ExecReload=/bin/kill -s HUP $MAINPID
 Restart=always
 RestartSec=10
@@ -22,7 +22,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/opt/perfmatters-api/logs
+ReadWritePaths=/var/www/perfmatters-api/logs
 ReadWritePaths=/tmp
 
 [Install]
