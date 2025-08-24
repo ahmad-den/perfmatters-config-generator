@@ -72,7 +72,7 @@ check_wordpress() {
 get_plugins() {
     log "Fetching active plugins..."
     
-    local plugins_json=$(wp plugin list --status=active --format=json $WP_CLI_ARGS 2>/dev/null)
+    local plugins_json=$(wp plugin list --status=active --format=json $WP_CLI_ARGS 2>/dev/null || echo "[]")
     
     if [ -z "$plugins_json" ] || [ "$plugins_json" = "[]" ]; then
         warning "No active plugins found"
@@ -81,15 +81,15 @@ get_plugins() {
     fi
     
     # Extract plugin names and convert to array format
-    local plugins_array=$(echo "$plugins_json" | jq -r '[.[].name]' 2>/dev/null)
+    local plugins_array=$(echo "$plugins_json" | jq -r '[.[].name]' 2>/dev/null || echo "[]")
     
-    if [ -z "$plugins_array" ]; then
+    if [ -z "$plugins_array" ] || [ "$plugins_array" = "null" ]; then
         error "Failed to parse plugins data"
         echo "[]"
         return
     fi
     
-    local plugin_count=$(echo "$plugins_array" | jq length)
+    local plugin_count=$(echo "$plugins_array" | jq length 2>/dev/null || echo "0")
     log "Found $plugin_count active plugins"
     
     # Show plugin list
@@ -103,22 +103,22 @@ get_themes() {
     log "Fetching active theme..."
     
     # Get active theme
-    local active_theme=$(wp theme list --status=active --format=json $WP_CLI_ARGS 2>/dev/null)
+    local active_theme=$(wp theme list --status=active --format=json $WP_CLI_ARGS 2>/dev/null || echo "[]")
     
     if [ -z "$active_theme" ] || [ "$active_theme" = "[]" ]; then
         error "No active theme found"
-        echo '""'
+        echo '"default"'
         return
     fi
     
-    local theme_name=$(echo "$active_theme" | jq -r '.[0].name' 2>/dev/null)
-    local theme_version=$(echo "$active_theme" | jq -r '.[0].version' 2>/dev/null)
-    local parent_theme=$(echo "$active_theme" | jq -r '.[0].parent // empty' 2>/dev/null)
+    local theme_name=$(echo "$active_theme" | jq -r '.[0].name // "default"' 2>/dev/null || echo "default")
+    local theme_version=$(echo "$active_theme" | jq -r '.[0].version // "1.0"' 2>/dev/null || echo "1.0")
+    local parent_theme=$(echo "$active_theme" | jq -r '.[0].parent // empty' 2>/dev/null || echo "")
     
     log "Active theme: $theme_name (v$theme_version)"
     
     # If there's a parent theme, use that instead (child themes often inherit parent optimizations)
-    if [ -n "$parent_theme" ] && [ "$parent_theme" != "null" ]; then
+    if [ -n "$parent_theme" ] && [ "$parent_theme" != "null" ] && [ "$parent_theme" != "" ]; then
         log "Parent theme detected: $parent_theme"
         log "Using parent theme for optimizations: $parent_theme"
         echo "\"$parent_theme\""
@@ -131,11 +131,11 @@ get_themes() {
 get_domain() {
     log "Fetching site domain..."
     
-    local site_url=$(wp option get siteurl $WP_CLI_ARGS 2>/dev/null)
+    local site_url=$(wp option get siteurl $WP_CLI_ARGS 2>/dev/null || echo "")
     
     if [ -z "$site_url" ]; then
         error "Could not fetch site URL"
-        echo '""'
+        echo '"https://example.com"'
         return
     fi
     
@@ -158,13 +158,19 @@ generate_config() {
     local json_payload=$(jq -n \
         --argjson plugins "$plugins" \
         --argjson theme "$theme" \
-        --argjson domain "$domain" \
+        --arg domain_str "$(echo "$domain" | tr -d '"')" \
         '{
             plugins: $plugins,
-            theme: $theme,
-            domain: $domain,
+            theme: ($theme | tostring),
+            domain: $domain_str,
             analyze_domain: true
         }')
+    
+    # Validate JSON payload
+    if ! echo "$json_payload" | jq . >/dev/null 2>&1; then
+        error "Invalid JSON payload generated"
+        return 1
+    fi
     
     log "API Request payload:"
     echo "$json_payload" | jq .
@@ -290,9 +296,25 @@ main() {
     local theme=$(get_themes)
     local domain=$(get_domain)
     
+    # Validate that we got valid data
+    if ! echo "$plugins" | jq . >/dev/null 2>&1; then
+        error "Invalid plugins data received"
+        exit 1
+    fi
+    
+    if ! echo "$theme" | jq . >/dev/null 2>&1; then
+        error "Invalid theme data received"
+        exit 1
+    fi
+    
+    if ! echo "$domain" | jq . >/dev/null 2>&1; then
+        error "Invalid domain data received"
+        exit 1
+    fi
+    
     echo ""
     log "WordPress Data Summary:"
-    echo "  Plugins: $(echo "$plugins" | jq length) active"
+    echo "  Plugins: $(echo "$plugins" | jq length 2>/dev/null || echo "0") active"
     echo "  Theme: $(echo "$theme" | tr -d '"')"
     echo "  Domain: $(echo "$domain" | tr -d '"')"
     echo ""
