@@ -20,56 +20,70 @@ check_requirements() {
     curl -sf "$API_URL/health" >/dev/null || error "API unreachable"
 }
 
+check_api() {
+    if ! curl -sf "$API_URL/health" >/dev/null 2>&1; then
+        print_error "API is not reachable at $API_URL"
+        exit 1
+    fi
+    print_success "API connection verified"
+}
+
 get_wp_data() {
-    local site_url=$(wp option get siteurl $WP_FLAGS 2>/dev/null || wp option get home $WP_FLAGS 2>/dev/null)
-    local plugins=$(wp plugin list --status=active --field=name --format=json $WP_FLAGS 2>/dev/null || echo "[]")
-    local theme=$(wp theme list --status=active --field=name --format=csv $WP_FLAGS 2>/dev/null | head -1)
-    local parent=$(wp theme get "$theme" --field=parent $WP_FLAGS 2>/dev/null || echo "false")
+    local site_url=$(wp option get siteurl --allow-root --skip-plugins --skip-themes --quiet 2>/dev/null || echo "")
+    local plugins=$(wp plugin list --status=active --field=name --format=json --allow-root --skip-plugins --skip-themes --quiet 2>/dev/null || echo "[]")
+    local theme=$(wp theme list --status=active --field=name --format=csv --allow-root --skip-plugins --skip-themes --quiet 2>/dev/null | head -1)
+    local parent=$(wp theme get "$theme" --field=parent --allow-root --skip-plugins --skip-themes --quiet 2>/dev/null || echo "false")
     
     [ "$parent" != "false" ] && theme="$parent"
     
-    echo "$site_url|$plugins|$theme"
+    echo "$site_url" "$plugins" "$theme"
 }
 
 generate_config() {
-    local data="$1"
-    local site_url=$(echo "$data" | cut -d'|' -f1)
-    local plugins=$(echo "$data" | cut -d'|' -f2)
-    local theme=$(echo "$data" | cut -d'|' -f3)
+    read site_url plugins theme <<< "$1"
     
     local payload="{\"plugins\":$plugins,\"theme\":\"$theme\",\"domain\":\"$site_url\",\"analyze_domain\":true}"
     local filename="perfmatters-config-$(date +%Y%m%d-%H%M%S).json"
     
-    local response=$(curl -s -w "%{http_code}" -X POST "$API_URL/generate-config" \
+    print_status "Generating configuration..."
+    
+    if curl -sf -X POST "$API_URL/generate-config" \
         -H "Content-Type: application/json" \
         -d "$payload" \
-        -o "$filename")
-    
-    [ "$response" = "200" ] || error "API failed with code $response"
-    success "Config saved: $filename"
+        -o "$filename"; then
+        print_success "Configuration saved: $filename"
+    else
+        print_error "Failed to generate configuration"
+        exit 1
+    fi
 }
 
 main() {
-    log "WordPress Perfmatters Config Generator"
+    echo -e "${BLUE}WordPress Perfmatters Config Generator${NC}"
+    echo "======================================"
     
-    check_requirements
-    success "Requirements check passed"
+    if ! command -v wp >/dev/null || ! wp core is-installed --allow-root --skip-plugins --skip-themes --quiet 2>/dev/null; then
+        print_error "WP-CLI not found or not in WordPress directory"
+        exit 1
+    fi
     
-    log "Fetching WordPress data..."
+    check_api
+    
     local wp_data=$(get_wp_data)
-    local site_url=$(echo "$wp_data" | cut -d'|' -f1)
-    local plugins_count=$(echo "$wp_data" | cut -d'|' -f2 | jq length 2>/dev/null || echo "0")
-    local theme=$(echo "$wp_data" | cut -d'|' -f3)
+    local site_url=$(echo "$wp_data" | cut -d' ' -f1)
+    local plugins_count=$(echo "$wp_data" | cut -d' ' -f2 | jq length 2>/dev/null || echo "0")
+    local theme=$(echo "$wp_data" | cut -d' ' -f3)
     
-    log "Site: $site_url"
-    log "Plugins: $plugins_count active"
-    log "Theme: $theme"
+    print_status "Site: $site_url"
+    print_status "Plugins: $plugins_count active"
+    print_status "Theme: $theme"
+    print_status "Domain analysis: enabled"
     
-    read -p "Generate config? (y/N): " -n 1 -r
     echo
-    [[ $REPLY =~ ^[Yy]$ ]] || exit 0
+    read -p "Generate Perfmatters config? (y/N): " -n 1 -r
+    echo
     
-    generate_config "$wp_data"
+    [[ $REPLY =~ ^[Yy]$ ]] && generate_config "$wp_data"
 }
 
 main "$@"
