@@ -8,7 +8,7 @@ set -e
 # Configuration
 API_URL="https://perfmatters.checkmysite.app"
 SITE_URL=""
-ANALYZE_DOMAIN=false
+ANALYZE_DOMAIN=true
 
 # Colors for output
 RED='\033[0;31m'
@@ -39,23 +39,17 @@ show_usage() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  -a, --analyze-domain    Enable domain analysis for ad detection"
     echo "  -u, --api-url URL       Custom API URL (default: https://perfmatters.checkmysite.app)"
     echo "  -h, --help              Show this help message"
     echo ""
     echo "Examples:"
-    echo "  $0                      Generate basic config"
-    echo "  $0 -a                   Generate config with ad detection"
+    echo "  $0                      Generate config with ad detection"
     echo "  $0 -u http://localhost:8080  Use local API"
 }
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
-        -a|--analyze-domain)
-            ANALYZE_DOMAIN=true
-            shift
-            ;;
         -u|--api-url)
             API_URL="$2"
             shift 2
@@ -266,7 +260,7 @@ main() {
     print_status "Summary:"
     echo "  Plugins: $(echo "$plugins_json" | grep -o ',' | wc -l | awk '{print $1+1}') found"
     echo "  Theme: $theme"
-    echo "  Domain analysis: $ANALYZE_DOMAIN"
+    echo "  Domain analysis: enabled (always)"
     echo ""
     
     # Confirm before proceeding
