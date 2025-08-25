@@ -63,12 +63,13 @@ class PerfmattersConfigGenerator:
             raise
     
     def generate_config(self, plugins: List[str], theme: str, domain: Optional[str] = None, 
-                       analyze_domain: bool = False) -> Dict[str, Any]:
+                       analyze_domain: bool = False, themes: Optional[List[str]] = None,
+                       theme_parent: Optional[str] = None, theme_child: Optional[str] = None) -> Dict[str, Any]:
         """Generate Perfmatters configuration based on plugins, theme, and optional domain analysis"""
         
         processing_info = {
             'plugins_processed': 0,
-            'theme_processed': False
+            'themes_processed': 0
         }
         
         # Collect all exclusions
@@ -113,17 +114,37 @@ class PerfmattersConfigGenerator:
             if delayjs_plugin_settings:
                 delay_js_exclusions.extend(delayjs_plugin_settings.get('delay_js_exclusions', []))
         
-        # Process theme
-        # Get RUCSS exclusions for theme
-        rucss_theme_settings = self._get_theme_rucss_optimizations(theme)
-        if rucss_theme_settings:
-            rucss_excluded_stylesheets.extend(rucss_theme_settings.get('rucss_excluded_stylesheets', []))
-            processing_info['theme_processed'] = True
+        # Process themes (multiple theme support)
+        themes_to_process = []
         
-        # Get Delay JS exclusions for theme
-        delayjs_theme_settings = self._get_theme_delayjs_optimizations(theme)
-        if delayjs_theme_settings:
-            delay_js_exclusions.extend(delayjs_theme_settings.get('delay_js_exclusions', []))
+        if themes:
+            # Use the themes array if provided
+            themes_to_process = themes
+        else:
+            # Fallback to individual theme fields for backward compatibility
+            if theme_parent:
+                themes_to_process.append(theme_parent)
+            if theme_child and theme_child != theme_parent:
+                themes_to_process.append(theme_child)
+            if not themes_to_process and theme:
+                themes_to_process.append(theme)
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        themes_to_process = [t for t in themes_to_process if not (t in seen or seen.add(t))]
+        
+        # Process each theme
+        for theme_name in themes_to_process:
+            # Get RUCSS exclusions for theme
+            rucss_theme_settings = self._get_theme_rucss_optimizations(theme_name)
+            if rucss_theme_settings:
+                rucss_excluded_stylesheets.extend(rucss_theme_settings.get('rucss_excluded_stylesheets', []))
+                processing_info['themes_processed'] += 1
+            
+            # Get Delay JS exclusions for theme
+            delayjs_theme_settings = self._get_theme_delayjs_optimizations(theme_name)
+            if delayjs_theme_settings:
+                delay_js_exclusions.extend(delayjs_theme_settings.get('delay_js_exclusions', []))
         
         # Update the config with collected exclusions
         
@@ -230,8 +251,9 @@ def generate_config():
         # Extract required parameters
         plugins = data.get('plugins', [])
         theme = data.get('theme', '')
-        domain = data.get('domain', '')
-        analyze_domain = data.get('analyze_domain', False)
+        themes = data.get('themes', [])
+        theme_parent = data.get('theme_parent', '')
+        theme_child = data.get('theme_child', '')
         domain = data.get('domain', '')
         analyze_domain = data.get('analyze_domain', False)
         
@@ -245,6 +267,9 @@ def generate_config():
         config_result = config_generator.generate_config(
             plugins=plugins,
             theme=theme,
+            themes=themes,
+            theme_parent=theme_parent,
+            theme_child=theme_child,
             domain=domain,
             analyze_domain=analyze_domain
         )
