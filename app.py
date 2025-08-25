@@ -126,12 +126,6 @@ class PerfmattersConfigGenerator:
             delay_js_exclusions.extend(delayjs_theme_settings.get('delay_js_exclusions', []))
         
         # Update the config with collected exclusions
-        js_exclusions_str = '\n'.join(js_exclusions)
-        delay_js_exclusions_str = '\n'.join(delay_js_exclusions)
-        rucss_excluded_stylesheets_str = '\n'.join(rucss_excluded_stylesheets)
-        rucss_excluded_selectors_str = '\n'.join(rucss_excluded_selectors)
-        minify_css_exclusions_str = '\n'.join(minify_css_exclusions)
-        minify_js_exclusions_str = '\n'.join(minify_js_exclusions)
         
         # Parse template and update directly
         try:
@@ -144,12 +138,12 @@ class PerfmattersConfigGenerator:
         
         # Update the assets section with collected exclusions
         assets = final_config['perfmatters_options']['assets']
-        assets['js_exclusions'] = js_exclusions_str
-        assets['delay_js_exclusions'] = delay_js_exclusions_str
-        assets['rucss_excluded_stylesheets'] = rucss_excluded_stylesheets_str
-        assets['rucss_excluded_selectors'] = rucss_excluded_selectors_str
-        assets['minify_css_exclusions'] = minify_css_exclusions_str
-        assets['minify_js_exclusions'] = minify_js_exclusions_str
+        assets['js_exclusions'] = js_exclusions
+        assets['delay_js_exclusions'] = delay_js_exclusions
+        assets['rucss_excluded_stylesheets'] = rucss_excluded_stylesheets
+        assets['rucss_excluded_selectors'] = rucss_excluded_selectors
+        assets['minify_css_exclusions'] = minify_css_exclusions
+        assets['minify_js_exclusions'] = minify_js_exclusions
         
         # Return the complete configuration
         return final_config
