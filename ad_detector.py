@@ -10,6 +10,9 @@ class AdProviderDetector:
     """Detects ad providers from website HTML source and returns appropriate exclusions"""
     
     def __init__(self):
+        # Regex for AdThrive subdomain detection
+        self.ADTHRIVE_HOST_RE = re.compile(r"https?://([a-z0-9-]+\.)*adthrive\.com/", re.I)
+        
         self.ad_providers = {
             "Mediavine": {
                 "domains": ["scripts.mediavine.com", "ads.mediavine.com"],
@@ -40,8 +43,17 @@ class AdProviderDetector:
                 ]
             },
             "AdThrive/Raptive": {
-                "domains": ["ads.adthrive.com", "cdn.adthrive.com", "raptive.com"],
-                "patterns": ["window.adthrive", "adthrive.config", "raptive"],
+                "domains": ["adthrive.com", "raptive.com", "raptive.s3", "raptivecdn.com"],
+                "patterns": [
+                    "window.adthrive",
+                    "adthrive.config", 
+                    "window.at",
+                    "at.siteid",
+                    "/sites/",
+                    "ads.min.js",
+                    "adthrive.com",
+                    "raptive"
+                ],
                 "js_exclusions": [
                     "adthrive",
                     "adthrive.min.js",
@@ -56,24 +68,22 @@ class AdProviderDetector:
                 "delay_js_exclusions": [
                     "adthrive",
                     "adthrive.min.js",
-                    "ads.min.js"
+                    "ads.min.js",
+                    "googletag"
                 ],
                 "rucss_excluded_selectors": [
                     ".adthrive",
-                    ".adthrive-ad", 
-                    "ads.min.css",
-                    "adthrive.min.css"
+                    ".adthrive-ad"
                 ],
                 "minify_css_exclusions": [
-                    ".adthrive",
-                    ".adthrive-ad", 
                     "ads.min.css",
                     "adthrive.min.css"
                 ],
                 "minify_js_exclusions": [
                     "adthrive",
                     "adthrive.min.js",
-                    "ads.min.js"
+                    "ads.min.js",
+                    "googletag"
                 ]
             },
             "Ezoic": {
@@ -282,14 +292,26 @@ class AdProviderDetector:
         Returns:
             True if provider is detected, False otherwise
         """
-        # Check domains in script sources
-        for script_src in script_sources:
-            for domain in provider_config["domains"]:
-                if domain in script_src:
-                    return True
-        
-        # Check patterns in HTML content (case-insensitive)
         html_lower = html_content.lower()
+        
+        # Check domains and patterns in script sources
+        for script_src in script_sources:
+            src_lower = script_src.lower()
+            
+            # Generic domain contains check
+            for domain in provider_config["domains"]:
+                if domain in src_lower:
+                    return True
+            
+            # Special case: any *.adthrive.com subdomain
+            if self.ADTHRIVE_HOST_RE.search(script_src):
+                return True
+            
+            # Common filenames/paths that indicate AdThrive/Raptive
+            if "ads.min.js" in src_lower or "/sites/" in src_lower:
+                return True
+        
+        # Check patterns in HTML content
         for pattern in provider_config["patterns"]:
             if pattern.lower() in html_lower:
                 return True
