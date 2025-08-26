@@ -3,6 +3,7 @@ import re
 from bs4 import BeautifulSoup
 from typing import Dict, List, Optional
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -234,13 +235,15 @@ class AdProviderDetector:
             'minify_js_exclusions': []
         }
         
+        detected_providers = []
+        
         try:
             # Ensure URL has protocol
             if not url.startswith(('http://', 'https://')):
                 url = 'https://' + url
             
             # Fetch the webpage
-            headers = {
+                'exclusions': exclusions,
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
             
@@ -263,13 +266,23 @@ class AdProviderDetector:
                 detected = self._check_provider(html_content, script_sources, provider_config)
                 
                 if detected:
-                    logger.info(f"Ad provider detected: {provider_name}")
-                    exclusions['rucss_exclusions'].extend(provider_config.get('rucss_exclusions', []))
-                    exclusions['delay_js_exclusions'].extend(provider_config.get('delay_js_exclusions', []))
-                    exclusions['rucss_excluded_selectors'].extend(provider_config.get('rucss_excluded_selectors', []))
-                    exclusions['minify_css_exclusions'].extend(provider_config.get('minify_css_exclusions', []))
-                    exclusions['js_exclusions'].extend(provider_config.get('js_exclusions', []))
-                    exclusions['minify_js_exclusions'].extend(provider_config.get('minify_js_exclusions', []))
+                    detected_providers.append(provider_name)
+            
+            # Only apply exclusions for detected providers
+            for provider_name in detected_providers:
+                logger.info(f"Ad provider detected: {provider_name}")
+                provider_config = self.ad_providers[provider_name]
+                exclusions['rucss_exclusions'].extend(provider_config.get('rucss_exclusions', []))
+                exclusions['delay_js_exclusions'].extend(provider_config.get('delay_js_exclusions', []))
+                exclusions['rucss_excluded_selectors'].extend(provider_config.get('rucss_excluded_selectors', []))
+                exclusions['minify_css_exclusions'].extend(provider_config.get('minify_css_exclusions', []))
+                exclusions['js_exclusions'].extend(provider_config.get('js_exclusions', []))
+                exclusions['minify_js_exclusions'].extend(provider_config.get('minify_js_exclusions', []))
+            
+            if detected_providers:
+                logger.info(f"Total ad providers detected: {', '.join(detected_providers)}")
+            else:
+                logger.info("No ad providers detected")
             
             return exclusions
             
