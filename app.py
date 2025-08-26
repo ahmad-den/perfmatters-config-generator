@@ -12,7 +12,7 @@ from flask import Flask, request, jsonify, Response, send_file
 from typing import Dict, List, Optional, Tuple, Any
 import tempfile
 from ad_detector import AdProviderDetector
-from ad_detector import AdProviderDetector
+from usage_logger import UsageLogger
 
 # Configure logging
 logging.basicConfig(
@@ -31,7 +31,6 @@ class PerfmattersConfigGenerator:
         self.rucss_dict = {}
         self.delayjs_dict = {}
         self.js_dict = {}
-        self.ad_detector = AdProviderDetector()
         self.ad_detector = AdProviderDetector()
         self.load_configurations()
     
@@ -281,10 +280,21 @@ class PerfmattersConfigGenerator:
 
 # Global instance
 config_generator = PerfmattersConfigGenerator()
+usage_logger = UsageLogger()
+
+def get_client_ip():
+    """Get client IP address from request headers"""
+    if request.headers.get('X-Forwarded-For'):
+        return request.headers.get('X-Forwarded-For').split(',')[0].strip()
+    elif request.headers.get('X-Real-IP'):
+        return request.headers.get('X-Real-IP')
+    else:
+        return request.remote_addr
 
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
+    usage_logger.log_health_check(user_ip=get_client_ip())
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
@@ -294,6 +304,9 @@ def health_check():
 @app.route('/generate-config', methods=['POST'])
 def generate_config():
     """Main endpoint to generate Perfmatters configuration"""
+    user_ip = get_client_ip()
+    user_agent = request.headers.get('User-Agent', 'Unknown')
+    
     try:
         data = request.get_json()
         
@@ -313,6 +326,19 @@ def generate_config():
         analyze_domain = data.get('analyze_domain', False)
         
         if not isinstance(plugins, list):
+            usage_logger.log_config_generation(
+                plugins=plugins if isinstance(plugins, list) else [],
+                theme=theme,
+                themes=themes,
+                theme_parent=theme_parent,
+                theme_child=theme_child,
+                domain=domain,
+                analyze_domain=analyze_domain,
+                user_ip=user_ip,
+                user_agent=user_agent,
+                success=False,
+                error_message='Plugins must be provided as a list'
+            )
             return jsonify({
                 'success': False,
                 'error': 'Plugins must be provided as a list'
@@ -327,6 +353,30 @@ def generate_config():
             theme_child=theme_child,
             domain=domain,
             analyze_domain=analyze_domain
+        )
+        
+        # Get detected ad providers for logging
+        detected_ad_providers = []
+        if analyze_domain and domain:
+            try:
+                ad_result = config_generator.ad_detector.detect_ad_providers(domain)
+                detected_ad_providers = ad_result.get('detected_providers', [])
+            except Exception:
+                pass  # Don't fail the main request if ad detection logging fails
+        
+        # Log successful usage
+        usage_logger.log_config_generation(
+            plugins=plugins,
+            theme=theme,
+            themes=themes,
+            theme_parent=theme_parent,
+            theme_child=theme_child,
+            domain=domain,
+            analyze_domain=analyze_domain,
+            detected_ad_providers=detected_ad_providers,
+            user_ip=user_ip,
+            user_agent=user_agent,
+            success=True
         )
         
         # Prepare response
@@ -350,6 +400,22 @@ def generate_config():
         
     except Exception as e:
         logger.error(f"Error generating config: {e}")
+        
+        # Log failed usage
+        usage_logger.log_config_generation(
+            plugins=plugins if 'plugins' in locals() else [],
+            theme=theme if 'theme' in locals() else '',
+            themes=themes if 'themes' in locals() else [],
+            theme_parent=theme_parent if 'theme_parent' in locals() else '',
+            theme_child=theme_child if 'theme_child' in locals() else '',
+            domain=domain if 'domain' in locals() else '',
+            analyze_domain=analyze_domain if 'analyze_domain' in locals() else False,
+            user_ip=user_ip,
+            user_agent=user_agent if 'user_agent' in locals() else 'Unknown',
+            success=False,
+            error_message=str(e)
+        )
+        
         return Response(json.dumps({
             'success': False,
             'error': str(e)
@@ -358,8 +424,10 @@ def generate_config():
 @app.route('/reload-config', methods=['POST'])
 def reload_config():
     """Reload configuration files without restarting server"""
+    user_ip = get_client_ip()
     try:
         config_generator.load_configurations()
+        usage_logger.log_config_reload(user_ip=user_ip, success=True)
         return jsonify({
             'success': True,
             'message': 'Configuration files reloaded successfully',
@@ -367,6 +435,7 @@ def reload_config():
         })
     except Exception as e:
         logger.error(f"Error reloading config: {e}")
+        usage_logger.log_config_reload(user_ip=user_ip, success=False, error_message=str(e))
         return jsonify({
             'success': False,
             'error': str(e)
@@ -375,6 +444,7 @@ def reload_config():
 @app.route('/detect-ads', methods=['POST'])
 def detect_ads():
     """Endpoint to detect ad providers from a URL"""
+    user_ip = get_client_ip()
     try:
         data = request.get_json()
         
@@ -387,6 +457,13 @@ def detect_ads():
         url = data.get('url', '')
         
         if not url:
+            usage_logger.log_ad_detection(
+                domain='',
+                detected_providers=[],
+                user_ip=user_ip,
+                success=False,
+                error_message='URL is required'
+            )
             return jsonify({
                 'success': False,
                 'error': 'URL is required'
@@ -395,10 +472,25 @@ def detect_ads():
         # Detect ad providers
         result = config_generator.ad_detector.detect_ad_providers(url)
         
+        # Log ad detection usage
+        usage_logger.log_ad_detection(
+            domain=url,
+            detected_providers=result.get('detected_providers', []),
+            user_ip=user_ip,
+            success=True
+        )
+        
         return jsonify(result)
         
     except Exception as e:
         logger.error(f"Error detecting ads: {e}")
+        usage_logger.log_ad_detection(
+            domain=url if 'url' in locals() else 'Unknown',
+            detected_providers=[],
+            user_ip=user_ip,
+            success=False,
+            error_message=str(e)
+        )
         return jsonify({
             'success': False,
             'error': str(e)
