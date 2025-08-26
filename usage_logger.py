@@ -122,10 +122,13 @@ class UsageLogger:
                 title = "❌ Config Generation Failed"
                 status_emoji = "❌"
             
-            # Build plugin list (limit to first 10 for readability)
-            plugins_display = usage_data['plugins'][:10]
-            if len(usage_data['plugins']) > 10:
-                plugins_display.append(f"... and {len(usage_data['plugins']) - 10} more")
+            # Build plugin list (limit to first 5 for main display)
+            plugins_display = usage_data['plugins'][:5]
+            remaining_plugins = len(usage_data['plugins']) - 5
+            
+            plugins_summary = ", ".join(plugins_display)
+            if remaining_plugins > 0:
+                plugins_summary += f" (+{remaining_plugins} more)"
             
             # Build theme info
             theme_info = []
@@ -141,55 +144,109 @@ class UsageLogger:
             # Build ad providers info
             ad_info = ""
             if usage_data['detected_ad_providers']:
-                ad_info = f"\n*Ad Providers:* {', '.join(usage_data['detected_ad_providers'])}"
+                ad_info = f"🎯 {', '.join(usage_data['detected_ad_providers'])}"
+            else:
+                ad_info = "🔍 None detected"
             
             # Build processing info
             processing_info = usage_data.get('processing_info', {})
             plugins_processed = processing_info.get('plugins_processed', 0)
             themes_processed = processing_info.get('themes_processed', 0)
             
-            # Create Slack attachment
-            attachment = {
+            # Create main attachment with summary
+            main_attachment = {
                 "color": color,
                 "title": title,
+                "title_link": usage_data['domain'] if usage_data['domain'] else None,
                 "fields": [
                     {
-                        "title": "📊 Summary",
-                        "value": f"*Plugins:* {usage_data['plugin_count']} ({plugins_processed} processed)\n*Themes:* {theme_display} ({themes_processed} processed)",
+                        "title": "📊 Quick Summary",
+                        "value": f"**{usage_data['plugin_count']} plugins** ({plugins_processed} optimized) • **{themes_processed} themes** optimized",
                         "short": True
                     },
                     {
-                        "title": "🌐 Domain Analysis",
-                        "value": f"*Domain:* {usage_data['domain'] or 'Not provided'}\n*Analysis:* {'Yes' if usage_data['analyze_domain'] else 'No'}{ad_info}",
+                        "title": "🎯 Ad Detection",
+                        "value": ad_info,
                         "short": True
+                    },
+                    {
+                        "title": "🔌 Top Plugins",
+                        "value": plugins_summary if usage_data['plugins'] else "None",
+                        "short": False
                     }
                 ],
-                "footer": f"IP: {usage_data['user_ip'] or 'Unknown'} | {usage_data['timestamp']}",
+                "footer": f"🌐 {usage_data['domain'] or 'No domain'} • 📍 {usage_data['user_ip'] or 'Unknown IP'}",
                 "ts": int(datetime.fromisoformat(usage_data['timestamp'].replace('Z', '+00:00')).timestamp())
             }
             
-            # Add plugins field if not too many
-            if len(plugins_display) <= 15:
-                attachment["fields"].append({
-                    "title": "🔌 Plugins",
-                    "value": ", ".join(plugins_display) if plugins_display else "None",
+            # Create detailed attachment (collapsed by default)
+            details_attachment = {
+                "color": "#36a64f" if usage_data['success'] else "#ff0000",
+                "title": "📋 Detailed Information",
+                "fields": [],
+                "footer": "Click to expand for full details"
+            }
+            
+            # Add all plugins if more than 5
+            if len(usage_data['plugins']) > 5:
+                all_plugins = ", ".join(usage_data['plugins'])
+                details_attachment["fields"].append({
+                    "title": f"🔌 All {len(usage_data['plugins'])} Plugins",
+                    "value": f"```{all_plugins}```",
+                    "short": False
+                })
+            
+            # Add theme details
+            if theme_display != "None":
+                details_attachment["fields"].append({
+                    "title": "🎨 Theme Details",
+                    "value": theme_display,
+                    "short": True
+                })
+            
+            # Add domain analysis details
+            if usage_data['analyze_domain']:
+                analysis_details = f"**Domain:** {usage_data['domain']}\n**Analysis:** {'✅ Enabled' if usage_data['analyze_domain'] else '❌ Disabled'}"
+                if usage_data['detected_ad_providers']:
+                    analysis_details += f"\n**Ad Providers:** {', '.join(usage_data['detected_ad_providers'])}"
+                
+                details_attachment["fields"].append({
+                    "title": "🔍 Domain Analysis",
+                    "value": analysis_details,
+                    "short": True
+                })
+            
+            # Add user agent if available
+            if usage_data.get('user_agent') and usage_data['user_agent'] != 'Unknown':
+                user_agent_short = usage_data['user_agent'][:100] + "..." if len(usage_data['user_agent']) > 100 else usage_data['user_agent']
+                details_attachment["fields"].append({
+                    "title": "🖥️ User Agent",
+                    "value": f"```{user_agent_short}```",
                     "short": False
                 })
             
             # Add error field if failed
             if not usage_data['success'] and usage_data['error_message']:
-                attachment["fields"].append({
+                main_attachment["fields"].append({
                     "title": "❌ Error",
                     "value": f"```{usage_data['error_message'][:500]}```",
                     "short": False
                 })
+            
+            # Prepare attachments array
+            attachments = [main_attachment]
+            
+            # Only add details attachment if there are details to show
+            if details_attachment["fields"]:
+                attachments.append(details_attachment)
             
             # Send to Slack
             payload = {
                 "channel": self.slack_channel,
                 "username": "Perfmatters API",
                 "icon_emoji": ":gear:",
-                "attachments": [attachment]
+                "text": f"{status_emoji} *Perfmatters Configuration Generated*" if usage_data['success'] else f"{status_emoji} *Configuration Generation Failed*",
+                "attachments": attachments
             }
             
             response = self.requests.post(self.slack_webhook_url, json=payload, timeout=10)
