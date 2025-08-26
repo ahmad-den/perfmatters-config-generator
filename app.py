@@ -30,6 +30,7 @@ class PerfmattersConfigGenerator:
         self.template_string = ""
         self.rucss_dict = {}
         self.delayjs_dict = {}
+        self.js_dict = {}
         self.ad_detector = AdProviderDetector()
         self.ad_detector = AdProviderDetector()
         self.load_configurations()
@@ -54,6 +55,12 @@ class PerfmattersConfigGenerator:
             with open(delayjs_path, 'r', encoding='utf-8') as f:
                 self.delayjs_dict = json.load(f)
             logger.info("Delay JS dictionary loaded successfully")
+            
+            # Load JS dictionary
+            js_path = os.path.join('config', 'dictionary_js.json')
+            with open(js_path, 'r', encoding='utf-8') as f:
+                self.js_dict = json.load(f)
+            logger.info("JS dictionary loaded successfully")
             
         except FileNotFoundError as e:
             logger.error(f"Configuration file not found: {e}")
@@ -88,6 +95,10 @@ class PerfmattersConfigGenerator:
         delayjs_universal = self.delayjs_dict.get('universal', {})
         delay_js_exclusions.extend(delayjs_universal.get('delay_js_exclusions', []))
         
+        # Apply universal exclusions from JS dictionary
+        js_universal = self.js_dict.get('universal', {})
+        js_exclusions.extend(js_universal.get('js_exclusions', []))
+        
         # Analyze domain for ad providers if requested
         if analyze_domain and domain:
             logger.info(f"Analyzing domain for ad providers: {domain}")
@@ -113,6 +124,11 @@ class PerfmattersConfigGenerator:
             delayjs_plugin_settings = self._get_plugin_delayjs_optimizations(plugin)
             if delayjs_plugin_settings:
                 delay_js_exclusions.extend(delayjs_plugin_settings.get('delay_js_exclusions', []))
+            
+            # Get JS exclusions for plugin
+            js_plugin_settings = self._get_plugin_js_optimizations(plugin)
+            if js_plugin_settings:
+                js_exclusions.extend(js_plugin_settings.get('js_exclusions', []))
         
         # Process themes (multiple theme support)
         themes_to_process = []
@@ -145,6 +161,11 @@ class PerfmattersConfigGenerator:
             delayjs_theme_settings = self._get_theme_delayjs_optimizations(theme_name)
             if delayjs_theme_settings:
                 delay_js_exclusions.extend(delayjs_theme_settings.get('delay_js_exclusions', []))
+            
+            # Get JS exclusions for theme
+            js_theme_settings = self._get_theme_js_optimizations(theme_name)
+            if js_theme_settings:
+                js_exclusions.extend(js_theme_settings.get('js_exclusions', []))
         
         # Update the config with collected exclusions
         
@@ -196,6 +217,17 @@ class PerfmattersConfigGenerator:
         
         return None
     
+    def _get_plugin_js_optimizations(self, plugin: str) -> Optional[Dict[str, Any]]:
+        """Get JS optimizations for a specific plugin"""
+        plugins_config = self.js_dict.get('plugins', {})
+        plugin_key = self._normalize_plugin_name(plugin)
+        
+        if plugin_key in plugins_config:
+            logger.info(f"Applied JS optimizations for plugin: {plugin}")
+            return plugins_config[plugin_key]
+        
+        return None
+    
     def _get_theme_rucss_optimizations(self, theme: str) -> Optional[Dict[str, Any]]:
         """Get RUCSS optimizations for a specific theme"""
         themes_config = self.rucss_dict.get('themes', {})
@@ -214,6 +246,17 @@ class PerfmattersConfigGenerator:
         
         if theme_key in themes_config:
             logger.info(f"Applied Delay JS optimizations for theme: {theme}")
+            return themes_config[theme_key]
+        
+        return None
+    
+    def _get_theme_js_optimizations(self, theme: str) -> Optional[Dict[str, Any]]:
+        """Get JS optimizations for a specific theme"""
+        themes_config = self.js_dict.get('themes', {})
+        theme_key = self._normalize_theme_name(theme)
+        
+        if theme_key in themes_config:
+            logger.info(f"Applied JS optimizations for theme: {theme}")
             return themes_config[theme_key]
         
         return None
