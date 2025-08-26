@@ -115,12 +115,12 @@ class UsageLogger:
             # Prepare Slack message
             if usage_data['success']:
                 color = "good"  # Green
-                title = "✅ Perfmatters Config Generated"
-                status_emoji = "✅"
+                title = "Perfmatters Config Generated"
+                status_emoji = "✓"
             else:
                 color = "danger"  # Red
-                title = "❌ Config Generation Failed"
-                status_emoji = "❌"
+                title = "Config Generation Failed"
+                status_emoji = "✗"
             
             # Build plugin list (limit to first 5 for main display)
             plugins_display = usage_data['plugins'][:5]
@@ -144,9 +144,9 @@ class UsageLogger:
             # Build ad providers info
             ad_info = ""
             if usage_data['detected_ad_providers']:
-                ad_info = f"🎯 {', '.join(usage_data['detected_ad_providers'])}"
+                ad_info = f"{', '.join(usage_data['detected_ad_providers'])}"
             else:
-                ad_info = "🔍 None detected"
+                ad_info = "None detected"
             
             # Build processing info
             processing_info = usage_data.get('processing_info', {})
@@ -160,58 +160,58 @@ class UsageLogger:
                 "title_link": usage_data['domain'] if usage_data['domain'] else None,
                 "fields": [
                     {
-                        "title": "📊 Quick Summary",
-                        "value": f"**{usage_data['plugin_count']} plugins** ({plugins_processed} optimized) • **{themes_processed} themes** optimized",
+                        "title": "Summary",
+                        "value": f"{usage_data['plugin_count']} plugins ({plugins_processed} optimized) | {themes_processed} themes optimized",
                         "short": True
                     },
                     {
-                        "title": "🎯 Ad Detection",
+                        "title": "Ad Providers",
                         "value": ad_info,
                         "short": True
                     },
                     {
-                        "title": "🔌 Top Plugins",
+                        "title": "Plugins",
                         "value": plugins_summary if usage_data['plugins'] else "None",
                         "short": False
                     }
                 ],
-                "footer": f"🌐 {usage_data['domain'] or 'No domain'} • 📍 {usage_data['user_ip'] or 'Unknown IP'}",
+                "footer": f"{usage_data['domain'] or 'No domain'} | {usage_data['user_ip'] or 'Unknown IP'}",
                 "ts": int(datetime.fromisoformat(usage_data['timestamp'].replace('Z', '+00:00')).timestamp())
             }
             
             # Create detailed attachment (collapsed by default)
             details_attachment = {
                 "color": "#36a64f" if usage_data['success'] else "#ff0000",
-                "title": "📋 Detailed Information",
+                "title": "Detailed Information",
                 "fields": [],
-                "footer": "Click to expand for full details"
+                "footer": "Additional details"
             }
             
             # Add all plugins if more than 5
             if len(usage_data['plugins']) > 5:
                 all_plugins = ", ".join(usage_data['plugins'])
                 details_attachment["fields"].append({
-                    "title": f"🔌 All {len(usage_data['plugins'])} Plugins",
-                    "value": f"```{all_plugins}```",
+                    "title": f"All {len(usage_data['plugins'])} Plugins",
+                    "value": all_plugins,
                     "short": False
                 })
             
             # Add theme details
             if theme_display != "None":
                 details_attachment["fields"].append({
-                    "title": "🎨 Theme Details",
+                    "title": "Theme Details",
                     "value": theme_display,
                     "short": True
                 })
             
             # Add domain analysis details
             if usage_data['analyze_domain']:
-                analysis_details = f"**Domain:** {usage_data['domain']}\n**Analysis:** {'✅ Enabled' if usage_data['analyze_domain'] else '❌ Disabled'}"
+                analysis_details = f"Domain: {usage_data['domain']}\nAnalysis: {'Enabled' if usage_data['analyze_domain'] else 'Disabled'}"
                 if usage_data['detected_ad_providers']:
-                    analysis_details += f"\n**Ad Providers:** {', '.join(usage_data['detected_ad_providers'])}"
+                    analysis_details += f"\nAd Providers: {', '.join(usage_data['detected_ad_providers'])}"
                 
                 details_attachment["fields"].append({
-                    "title": "🔍 Domain Analysis",
+                    "title": "Domain Analysis",
                     "value": analysis_details,
                     "short": True
                 })
@@ -220,16 +220,16 @@ class UsageLogger:
             if usage_data.get('user_agent') and usage_data['user_agent'] != 'Unknown':
                 user_agent_short = usage_data['user_agent'][:100] + "..." if len(usage_data['user_agent']) > 100 else usage_data['user_agent']
                 details_attachment["fields"].append({
-                    "title": "🖥️ User Agent",
-                    "value": f"```{user_agent_short}```",
+                    "title": "User Agent",
+                    "value": user_agent_short,
                     "short": False
                 })
             
             # Add error field if failed
             if not usage_data['success'] and usage_data['error_message']:
                 main_attachment["fields"].append({
-                    "title": "❌ Error",
-                    "value": f"```{usage_data['error_message'][:500]}```",
+                    "title": "Error",
+                    "value": usage_data['error_message'][:500],
                     "short": False
                 })
             
@@ -244,8 +244,8 @@ class UsageLogger:
             payload = {
                 "channel": self.slack_channel,
                 "username": "Perfmatters API",
-                "icon_emoji": ":gear:",
-                "text": f"{status_emoji} *Perfmatters Configuration Generated*" if usage_data['success'] else f"{status_emoji} *Configuration Generation Failed*",
+                "icon_emoji": ":wrench:",
+                "text": f"{status_emoji} Perfmatters Configuration {'Generated' if usage_data['success'] else 'Failed'}",
                 "attachments": attachments
             }
             
@@ -266,43 +266,43 @@ class UsageLogger:
         try:
             if usage_data['success']:
                 color = "good" if usage_data['providers_count'] > 0 else "warning"
-                title = f"🔍 Ad Detection: {usage_data['providers_count']} providers found"
-                emoji = "🎯" if usage_data['providers_count'] > 0 else "🔍"
+                title = f"Ad Detection: {usage_data['providers_count']} providers found"
+                emoji = "✓" if usage_data['providers_count'] > 0 else "•"
             else:
                 color = "danger"
-                title = "❌ Ad Detection Failed"
-                emoji = "❌"
+                title = "Ad Detection Failed"
+                emoji = "✗"
             
             attachment = {
                 "color": color,
                 "title": title,
                 "fields": [
                     {
-                        "title": "🌐 Domain",
+                        "title": "Domain",
                         "value": usage_data['domain'],
                         "short": True
                     },
                     {
-                        "title": "📊 Results",
-                        "value": f"*Providers:* {', '.join(usage_data['detected_providers']) if usage_data['detected_providers'] else 'None found'}",
+                        "title": "Providers",
+                        "value": ', '.join(usage_data['detected_providers']) if usage_data['detected_providers'] else 'None found',
                         "short": True
                     }
                 ],
-                "footer": f"IP: {usage_data['user_ip'] or 'Unknown'} | {usage_data['timestamp']}",
+                "footer": f"{usage_data['user_ip'] or 'Unknown IP'}",
                 "ts": int(datetime.fromisoformat(usage_data['timestamp'].replace('Z', '+00:00')).timestamp())
             }
             
             if not usage_data['success'] and usage_data['error_message']:
                 attachment["fields"].append({
-                    "title": "❌ Error",
-                    "value": f"```{usage_data['error_message'][:300]}```",
+                    "title": "Error",
+                    "value": usage_data['error_message'][:300],
                     "short": False
                 })
             
             payload = {
                 "channel": self.slack_channel,
                 "username": "Perfmatters API",
-                "icon_emoji": ":mag:",
+                "icon_emoji": ":mag_right:",
                 "attachments": [attachment]
             }
             
@@ -329,8 +329,8 @@ class UsageLogger:
                 payload = {
                     "channel": self.slack_channel,
                     "username": "Perfmatters API",
-                    "icon_emoji": ":arrows_counterclockwise:",
-                    "text": f"{'✅' if success else '❌'} Configuration {'reloaded' if success else 'reload failed'} | IP: {user_ip or 'Unknown'}"
+                    "icon_emoji": ":recycle:",
+                    "text": f"{'✓' if success else '✗'} Configuration {'reloaded' if success else 'reload failed'} | {user_ip or 'Unknown IP'}"
                 }
                 
                 self.requests.post(self.slack_webhook_url, json=payload, timeout=5)
