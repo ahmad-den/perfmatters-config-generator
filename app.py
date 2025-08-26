@@ -11,8 +11,12 @@ from flask import Flask, request, jsonify, Response
 from flask import Flask, request, jsonify, Response, send_file
 from typing import Dict, List, Optional, Tuple, Any
 import tempfile
+from dotenv import load_dotenv
 from ad_detector import AdProviderDetector
 from usage_logger import UsageLogger
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
