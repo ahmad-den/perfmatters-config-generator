@@ -8,108 +8,26 @@
     ]
   },
   "plugins": {
-    "woocommerce": {
+    "example-plugin": {
       "js_exclusions": [
-        "wc-cart-fragments",
-        "woocommerce",
-        "select2"
+        "example-script"
       ]
     },
-    "elementor": {
+    "dummy-plugin": {
       "js_exclusions": [
-        "elementor-frontend",
-        "elementor-waypoints",
-        "swiper"
-      ]
-    },
-    "contact-form-7": {
-      "js_exclusions": [
-        "contact-form-7"
-      ]
-    },
-    "gravityforms": {
-      "js_exclusions": [
-        "gform",
-        "gravityforms"
-      ]
-    },
-    "ninja-forms": {
-      "js_exclusions": [
-        "ninja-forms"
-      ]
-    },
-    "wpforms": {
-      "js_exclusions": [
-        "wpforms"
-      ]
-    },
-    "revslider": {
-      "js_exclusions": [
-        "revslider",
-        "revolution"
-      ]
-    },
-    "layerslider": {
-      "js_exclusions": [
-        "layerslider"
-      ]
-    },
-    "smart-slider-3": {
-      "js_exclusions": [
-        "smartslider"
-      ]
-    },
-    "jetpack": {
-      "js_exclusions": [
-        "jetpack"
-      ]
-    },
-    "yoast": {
-      "js_exclusions": [
-        "yoast"
-      ]
-    },
-    "rankmath": {
-      "js_exclusions": [
-        "rankmath"
+        "dummy-script"
       ]
     }
   },
   "themes": {
-    "astra": {
+    "example-theme": {
       "js_exclusions": [
-        "astra"
+        "example-theme-script"
       ]
     },
-    "generatepress": {
+    "dummy-theme": {
       "js_exclusions": [
-        "generatepress"
-      ]
-    },
-    "oceanwp": {
-      "js_exclusions": [
-        "oceanwp"
-      ]
-    },
-    "kadence": {
-      "js_exclusions": [
-        "kadence"
-      ]
-    },
-    "divi": {
-      "js_exclusions": [
-        "divi",
-        "et_pb"
-      ]
-    },
-    "avada": {
-      "js_exclusions": [
-        "avada"
-      ]
-    },
-    "hello-elementor": {
-      "js_exclusions": [
-        "hello-elementor"
+        "dummy-theme-script"
       ]
     }
   }
