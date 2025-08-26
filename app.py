@@ -166,6 +166,11 @@ class PerfmattersConfigGenerator:
         assets['minify_css_exclusions'] = minify_css_exclusions
         assets['minify_js_exclusions'] = minify_js_exclusions
         
+        # Special handling for Kadence themes - disable remove_comment_urls
+        if self._is_kadence_theme(themes_to_process):
+            final_config['perfmatters_options']['remove_comment_urls'] = ""
+            logger.info("Kadence theme detected - disabled remove_comment_urls")
+        
         # Return the complete configuration
         return final_config
         
@@ -223,6 +228,13 @@ class PerfmattersConfigGenerator:
     def _normalize_theme_name(self, theme: str) -> str:
         """Normalize theme name for dictionary lookup"""
         return theme.lower().replace(' ', '-').replace('_', '-')
+    
+    def _is_kadence_theme(self, themes: List[str]) -> bool:
+        """Check if any of the themes is Kadence-based"""
+        for theme in themes:
+            if 'kadence' in theme.lower():
+                return True
+        return False
 
 # Global instance
 config_generator = PerfmattersConfigGenerator()
