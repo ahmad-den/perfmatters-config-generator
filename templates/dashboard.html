@@ -8,6 +8,56 @@
     <p>Generate optimized Perfmatters configurations for your WordPress site</p>
 </div>
 
+<!-- Usage Statistics Section -->
+<div class="card">
+    <h3 style="margin-bottom: 15px;">📊 Usage Statistics</h3>
+    <div id="statsLoading" class="loading" style="display: block;">
+        <div class="spinner"></div>
+        <p>Loading statistics...</p>
+    </div>
+    
+    <div id="statsContent" style="display: none;">
+        <div class="stats-summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+            <div class="stat-card">
+                <h4>Total Requests</h4>
+                <span id="totalRequests">0</span>
+            </div>
+            <div class="stat-card">
+                <h4>Successful</h4>
+                <span id="successfulRequests">0</span>
+            </div>
+            <div class="stat-card">
+                <h4>Unique Domains</h4>
+                <span id="uniqueDomains">0</span>
+            </div>
+            <div class="stat-card">
+                <h4>Unique IPs</h4>
+                <span id="uniqueIps">0</span>
+            </div>
+        </div>
+        
+        <h4 style="margin-bottom: 10px;">Recent API Usage</h4>
+        <div class="usage-table-container" style="max-height: 400px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <table id="usageTable" style="width: 100%; border-collapse: collapse;">
+                <thead style="background: #f7fafc; position: sticky; top: 0;">
+                    <tr>
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0;">Time</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0;">Domain</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0;">IP</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0;">Plugins</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0;">Theme</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0;">Status</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0;">Config</th>
+                    </tr>
+                </thead>
+                <tbody id="usageTableBody">
+                    <!-- Usage data will be populated here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 <div class="card">
     <form id="configForm">
         <div class="form-group">
@@ -89,6 +139,75 @@
 
 {% block scripts %}
 <script>
+// Load usage statistics
+async function loadUsageStats() {
+    try {
+        const response = await fetch('/api/usage-stats');
+        const data = await response.json();
+        
+        if (data.success) {
+            // Update summary stats
+            document.getElementById('totalRequests').textContent = data.summary.total_requests;
+            document.getElementById('successfulRequests').textContent = data.summary.successful_requests;
+            document.getElementById('uniqueDomains').textContent = data.summary.unique_domains;
+            document.getElementById('uniqueIps').textContent = data.summary.unique_ips;
+            
+            // Populate usage table
+            const tbody = document.getElementById('usageTableBody');
+            tbody.innerHTML = '';
+            
+            data.recent_usage.forEach(usage => {
+                const row = document.createElement('tr');
+                
+                // Format timestamp
+                const date = new Date(usage.created_at);
+                const timeStr = date.toLocaleString();
+                
+                // Truncate domain for display
+                const domain = usage.domain || 'N/A';
+                const displayDomain = domain.length > 30 ? domain.substring(0, 30) + '...' : domain;
+                
+                // Status
+                const status = usage.success ? 
+                    '<span class="status-success">✓ Success</span>' : 
+                    '<span class="status-error">✗ Error</span>';
+                
+                // Download button (only if config exists)
+                const downloadBtn = usage.config_json ? 
+                    `<a href="/download-usage-config/${usage.id}" class="download-btn">Download</a>` : 
+                    'N/A';
+                
+                row.innerHTML = `
+                    <td>${timeStr}</td>
+                    <td title="${domain}">${displayDomain}</td>
+                    <td>${usage.user_ip || 'N/A'}</td>
+                    <td>${usage.plugins_count || 0}</td>
+                    <td>${usage.theme || 'N/A'}</td>
+                    <td>${status}</td>
+                    <td>${downloadBtn}</td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+            
+            // Show stats content
+            document.getElementById('statsLoading').style.display = 'none';
+            document.getElementById('statsContent').style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Error loading usage stats:', error);
+        document.getElementById('statsLoading').innerHTML = '<p style="color: #ef4444;">Failed to load statistics</p>';
+    }
+}
+
+// Load stats on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadUsageStats();
+    
+    // Refresh stats every 30 seconds
+    setInterval(loadUsageStats, 30000);
+});
+
 document.getElementById('configForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
@@ -135,6 +254,9 @@ document.getElementById('configForm').addEventListener('submit', async function(
             
             document.getElementById('downloadBtn').href = result.download_url;
             document.getElementById('result').style.display = 'block';
+            
+            // Refresh usage stats after successful generation
+            setTimeout(loadUsageStats, 1000);
         } else {
             throw new Error(result.error || 'Unknown error occurred');
         }

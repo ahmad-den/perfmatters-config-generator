@@ -88,6 +88,7 @@ class DashboardManager:
                     theme=theme,
                     domain=domain,
                     analyze_domain=analyze_domain,
+                    processing_info={'generated_config': config_result},
                     user_ip=user_ip,
                     user_agent=request.headers.get('User-Agent', 'Dashboard'),
                     success=True
@@ -127,6 +128,59 @@ class DashboardManager:
                     return jsonify({'error': 'File not found'}), 404
             except Exception as e:
                 logger.error(f"Download error: {e}")
+                return jsonify({'error': 'Download failed'}), 500
+    
+        @app.route('/api/usage-stats')
+        def get_usage_stats():
+            """Get usage statistics for dashboard"""
+            if not self._is_authenticated():
+                return jsonify({'error': 'Not authenticated'}), 401
+            
+            try:
+                recent_usage = self.usage_logger.get_recent_usage(limit=100)
+                summary = self.usage_logger.get_usage_stats_summary()
+                
+                return jsonify({
+                    'success': True,
+                    'recent_usage': recent_usage,
+                    'summary': summary
+                })
+            except Exception as e:
+                logger.error(f"Error fetching usage stats: {e}")
+                return jsonify({'success': False, 'error': str(e)}), 500
+        
+        @app.route('/download-usage-config/<int:usage_id>')
+        def download_usage_config(usage_id):
+            """Download config from usage history"""
+            if not self._is_authenticated():
+                return jsonify({'error': 'Not authenticated'}), 401
+            
+            try:
+                # Get the specific usage record
+                usage_records = self.usage_logger.get_recent_usage(limit=1000)
+                usage_record = next((r for r in usage_records if r['id'] == usage_id), None)
+                
+                if not usage_record or not usage_record.get('config_json'):
+                    return jsonify({'error': 'Config not found'}), 404
+                
+                # Create temporary file with the config
+                temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+                temp_file.write(usage_record['config_json'])
+                temp_file.close()
+                
+                # Generate filename
+                timestamp = usage_record.get('timestamp', 'unknown')
+                domain = usage_record.get('domain', 'unknown-domain')
+                filename = f"perfmatters-config-{domain}-{timestamp}.json"
+                
+                return send_file(
+                    temp_file.name,
+                    as_attachment=True,
+                    download_name=filename,
+                    mimetype='application/json'
+                )
+            except Exception as e:
+                logger.error(f"Error downloading usage config: {e}")
                 return jsonify({'error': 'Download failed'}), 500
     
     def _is_authenticated(self):
