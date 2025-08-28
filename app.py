@@ -548,6 +548,7 @@ if __name__ == '__main__':
     os.makedirs('templates', exist_ok=True)
     os.makedirs('config', exist_ok=True)
     os.makedirs('logs', exist_ok=True)
+    os.makedirs('generated_configs', exist_ok=True)
     
     # Run the application
     port = int(os.environ.get('PORT', 8080))

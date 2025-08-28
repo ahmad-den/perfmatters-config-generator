@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfmatters Config Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f8fafc;
+            color: #334155;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            color: #64748b;
+            font-size: 1.1rem;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #3b82f6;
+            display: block;
+        }
+        
+        .stat-label {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+        
+        .configs-table {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .table-header {
+            background: #f1f5f9;
+            padding: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .table-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .table th,
+        .table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .table th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #475569;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .table tr:hover {
+            background: #f8fafc;
+        }
+        
+        .domain-link {
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .domain-link:hover {
+            text-decoration: underline;
+        }
+        
+        .download-btn {
+            background: #3b82f6;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .download-btn:hover {
+            background: #2563eb;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            background: #dbeafe;
+            color: #1e40af;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .ad-providers {
+            font-size: 0.875rem;
+            color: #059669;
+        }
+        
+        .no-configs {
+            text-align: center;
+            padding: 3rem;
+            color: #64748b;
+        }
+        
+        .no-configs h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+            color: #475569;
+        }
+        
+        .file-size {
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+        
+        .time {
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .table-container {
+                overflow-x: auto;
+            }
+            
+            .table {
+                min-width: 800px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Perfmatters Configuration Dashboard</h1>
+            <p>View and download all generated Perfmatters configurations</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <span class="stat-number">{{ configs|length }}</span>
+                <div class="stat-label">Total Configurations</div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">{{ configs|selectattr('detected_ad_providers')|list|length }}</span>
+                <div class="stat-label">With Ad Providers</div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">{{ configs|map(attribute='plugins_count')|sum }}</span>
+                <div class="stat-label">Total Plugins Processed</div>
+            </div>
+        </div>
+        
+        <div class="configs-table">
+            <div class="table-header">
+                <h2>Generated Configurations</h2>
+            </div>
+            
+            {% if configs %}
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Domain</th>
+                            <th>IP Address</th>
+                            <th>Generated At</th>
+                            <th>Plugins</th>
+                            <th>Theme</th>
+                            <th>Ad Providers</th>
+                            <th>Size</th>
+                            <th>Download</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for config in configs %}
+                        <tr>
+                            <td>
+                                {% if config.domain and config.domain != 'No domain' %}
+                                    <a href="{{ config.domain }}" target="_blank" class="domain-link">
+                                        {{ config.domain.replace('https://', '').replace('http://', '') }}
+                                    </a>
+                                {% else %}
+                                    <span style="color: #94a3b8;">No domain</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ config.client_ip }}</td>
+                            <td class="time">
+                                {% set dt = config.generated_at %}
+                                {% if dt %}
+                                    {{ dt[:10] }}<br>
+                                    <small>{{ dt[11:19] }}</small>
+                                {% else %}
+                                    Unknown
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge">{{ config.plugins_count }} plugins</span>
+                            </td>
+                            <td>{{ config.theme }}</td>
+                            <td>
+                                {% if config.detected_ad_providers %}
+                                    <div class="ad-providers">
+                                        {{ config.detected_ad_providers|join(', ') }}
+                                    </div>
+                                {% else %}
+                                    <span style="color: #94a3b8;">None</span>
+                                {% endif %}
+                            </td>
+                            <td class="file-size">
+                                {% set size_kb = (config.file_size / 1024)|round(1) %}
+                                {{ size_kb }} KB
+                            </td>
+                            <td>
+                                <a href="/download/{{ config.filename }}" class="download-btn">
+                                    Download JSON
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="no-configs">
+                <h3>No configurations generated yet</h3>
+                <p>Generated configurations will appear here once you start using the API.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
