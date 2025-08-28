@@ -3,25 +3,27 @@
 {% block title %}Login - Perfmatters Config Generator{% endblock %}
 
 {% block content %}
-<div class="header">
-    <h1>🔐 Dashboard Login</h1>
-    <p>Enter your password to access the Perfmatters configuration generator</p>
-</div>
-
-<div class="card">
-    {% if error %}
-    <div class="alert alert-error">
-        {{ error }}
-    </div>
-    {% endif %}
-    
-    <form method="POST">
-        <div class="form-group">
-            <label for="password">Password:</label>
-            <input type="password" id="password" name="password" class="form-control" required autocomplete="current-password">
+<div style="max-width: 400px; margin: 4rem auto;">
+    <div class="card">
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <h1 style="font-size: 2rem; margin-bottom: 0.5rem;">🔐 Dashboard Login</h1>
+            <p style="color: #718096;">Enter your password to access the configuration generator</p>
         </div>
+
+        {% if error %}
+        <div class="alert alert-error">
+            {{ error }}
+        </div>
+        {% endif %}
         
-        <button type="submit" class="btn btn-primary">Login</button>
-    </form>
+        <form method="POST">
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" class="form-control" required autocomplete="current-password">
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
+        </form>
+    </div>
 </div>
 {% endblock %}

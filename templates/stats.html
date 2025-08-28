@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block title %}Statistics - Perfmatters Config{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Usage Statistics</h1>
+    <p class="page-description">Monitor API usage and download previous configurations</p>
+</div>
+
+<div id="statsLoading" class="loading" style="display: block;">
+    <div class="spinner"></div>
+    <p>Loading statistics...</p>
+</div>
+
+<div id="statsContent" style="display: none;">
+    <!-- Statistics Summary -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h4>Total Requests</h4>
+            <span id="totalRequests">0</span>
+        </div>
+        <div class="stat-card">
+            <h4>Successful</h4>
+            <span id="successfulRequests">0</span>
+        </div>
+        <div class="stat-card">
+            <h4>Unique Domains</h4>
+            <span id="uniqueDomains">0</span>
+        </div>
+        <div class="stat-card">
+            <h4>Unique IPs</h4>
+            <span id="uniqueIps">0</span>
+        </div>
+    </div>
+
+    <!-- Search and Controls -->
+    <div class="card">
+        <div class="search-controls">
+            <input type="text" id="searchInput" class="form-control search-input" placeholder="Search by domain, IP, or theme...">
+            <select id="statusFilter" class="form-control" style="width: auto;">
+                <option value="">All Status</option>
+                <option value="success">Success Only</option>
+                <option value="error">Error Only</option>
+            </select>
+            <button type="button" class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+        </div>
+    </div>
+
+    <!-- Usage Table -->
+    <div class="table-container">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Domain</th>
+                    <th>IP Address</th>
+                    <th>Plugins</th>
+                    <th>Theme</th>
+                    <th>Status</th>
+                    <th>Config</th>
+                </tr>
+            </thead>
+            <tbody id="usageTableBody">
+                <!-- Data will be populated here -->
+            </tbody>
+        </table>
+        
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <h3>No data found</h3>
+            <p>No usage records match your current filters.</p>
+        </div>
+        
+        <!-- Pagination -->
+        <div class="pagination" id="pagination">
+            <!-- Pagination will be populated here -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allUsageData = [];
+let filteredData = [];
+let currentPage = 1;
+const itemsPerPage = 20;
+
+// Load usage statistics
+async function loadUsageStats() {
+    try {
+        const response = await fetch('/api/usage-stats');
+        const data = await response.json();
+        
+        if (data.success) {
+            // Update summary stats
+            document.getElementById('totalRequests').textContent = data.summary.total_requests;
+            document.getElementById('successfulRequests').textContent = data.summary.successful_requests;
+            document.getElementById('uniqueDomains').textContent = data.summary.unique_domains;
+            document.getElementById('uniqueIps').textContent = data.summary.unique_ips;
+            
+            // Store data
+            allUsageData = data.recent_usage;
+            applyFilters();
+            
+            // Show stats content
+            document.getElementById('statsLoading').style.display = 'none';
+            document.getElementById('statsContent').style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Error loading usage stats:', error);
+        document.getElementById('statsLoading').innerHTML = '<div class="alert alert-error">Failed to load statistics</div>';
+    }
+}
+
+// Apply search and status filters
+function applyFilters() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const statusFilter = document.getElementById('statusFilter').value;
+    
+    filteredData = allUsageData.filter(usage => {
+        // Search filter
+        const matchesSearch = !searchTerm || 
+            (usage.domain && usage.domain.toLowerCase().includes(searchTerm)) ||
+            (usage.user_ip && usage.user_ip.toLowerCase().includes(searchTerm)) ||
+            (usage.theme && usage.theme.toLowerCase().includes(searchTerm));
+        
+        // Status filter
+        const matchesStatus = !statusFilter || 
+            (statusFilter === 'success' && usage.success) ||
+            (statusFilter === 'error' && !usage.success);
+        
+        return matchesSearch && matchesStatus;
+    });
+    
+    currentPage = 1;
+    renderTable();
+    renderPagination();
+}
+
+// Render table with current page data
+function renderTable() {
+    const tbody = document.getElementById('usageTableBody');
+    const emptyState = document.getElementById('emptyState');
+    
+    if (filteredData.length === 0) {
+        tbody.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+    }
+    
+    emptyState.style.display = 'none';
+    
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pageData = filteredData.slice(startIndex, endIndex);
+    
+    tbody.innerHTML = '';
+    
+    pageData.forEach(usage => {
+        const row = document.createElement('tr');
+        
+        // Format timestamp
+        const date = new Date(usage.created_at);
+        const timeStr = date.toLocaleString();
+        
+        // Truncate domain for display
+        const domain = usage.domain || 'N/A';
+        const displayDomain = domain.length > 40 ? domain.substring(0, 40) + '...' : domain;
+        
+        // Status
+        const status = usage.success ? 
+            '<span class="status-success">✓ Success</span>' : 
+            '<span class="status-error">✗ Error</span>';
+        
+        // Download button (only if config exists)
+        const downloadBtn = usage.config_json ? 
+            `<a href="/download-usage-config/${usage.id}" class="download-btn">Download</a>` : 
+            'N/A';
+        
+        row.innerHTML = `
+            <td>${timeStr}</td>
+            <td title="${domain}">${displayDomain}</td>
+            <td>${usage.user_ip || 'N/A'}</td>
+            <td>${usage.plugins_count || 0}</td>
+            <td>${usage.theme || 'N/A'}</td>
+            <td>${status}</td>
+            <td>${downloadBtn}</td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+}
+
+// Render pagination controls
+function renderPagination() {
+    const pagination = document.getElementById('pagination');
+    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+    
+    if (totalPages <= 1) {
+        pagination.innerHTML = '';
+        return;
+    }
+    
+    let paginationHTML = '';
+    
+    // Previous button
+    paginationHTML += `<button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>Previous</button>`;
+    
+    // Page numbers
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, currentPage + 2);
+    
+    if (startPage > 1) {
+        paginationHTML += `<button onclick="changePage(1)">1</button>`;
+        if (startPage > 2) {
+            paginationHTML += `<span style="padding: 0.5rem;">...</span>`;
+        }
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+        paginationHTML += `<button onclick="changePage(${i})" ${i === currentPage ? 'class="active"' : ''}>${i}</button>`;
+    }
+    
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            paginationHTML += `<span style="padding: 0.5rem;">...</span>`;
+        }
+        paginationHTML += `<button onclick="changePage(${totalPages})">${totalPages}</button>`;
+    }
+    
+    // Next button
+    paginationHTML += `<button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Next</button>`;
+    
+    pagination.innerHTML = paginationHTML;
+}
+
+// Change page
+function changePage(page) {
+    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+    if (page < 1 || page > totalPages) return;
+    
+    currentPage = page;
+    renderTable();
+    renderPagination();
+}
+
+// Clear all filters
+function clearFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('statusFilter').value = '';
+    applyFilters();
+}
+
+// Event listeners
+document.getElementById('searchInput').addEventListener('input', applyFilters);
+document.getElementById('statusFilter').addEventListener('change', applyFilters);
+
+// Load stats on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadUsageStats();
+    
+    // Refresh stats every 30 seconds
+    setInterval(loadUsageStats, 30000);
+});
+</script>
+{% endblock %}

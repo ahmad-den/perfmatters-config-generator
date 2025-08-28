@@ -28,6 +28,14 @@ class DashboardManager:
             
             return render_template('dashboard.html')
         
+        @app.route('/stats')
+        def dashboard_stats():
+            """Statistics page"""
+            if not self._is_authenticated():
+                return redirect(url_for('dashboard_login'))
+            
+            return render_template('stats.html')
+        
         @app.route('/login', methods=['GET', 'POST'])
         def dashboard_login():
             """Dashboard login page"""
