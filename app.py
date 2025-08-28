@@ -391,6 +391,7 @@ def generate_config():
             domain=domain,
             analyze_domain=analyze_domain,
             detected_ad_providers=detected_ad_providers,
+            generated_config=config_result,
             user_ip=user_ip,
             user_agent=user_agent,
             success=True

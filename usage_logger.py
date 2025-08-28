@@ -117,7 +117,7 @@ class UsageLogger:
                             domain: Optional[str] = None,
                             analyze_domain: bool = False,
                             detected_ad_providers: Optional[List[str]] = None,
-                            processing_info: Optional[Dict] = None,
+                            generated_config: Optional[Dict] = None,
                             user_ip: Optional[str] = None,
                             user_agent: Optional[str] = None,
                             success: bool = True,
@@ -141,14 +141,14 @@ class UsageLogger:
             'analyze_domain': analyze_domain,
             'detected_ad_providers': detected_ad_providers or [],
             'ad_providers_count': len(detected_ad_providers) if detected_ad_providers else 0,
-            'processing_info': processing_info or {},
+            'generated_config': generated_config,
             'user_ip': user_ip,
             'user_agent': user_agent,
             'error_message': error_message
         }
         
         # Save to database with config JSON if successful
-        config_json = json.dumps(processing_info.get('generated_config')) if processing_info and processing_info.get('generated_config') else None
+        config_json = json.dumps(generated_config) if generated_config else None
         self._save_to_database(usage_data, config_json)
         
         # Log to application logs

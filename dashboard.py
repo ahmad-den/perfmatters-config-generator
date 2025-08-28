@@ -88,7 +88,7 @@ class DashboardManager:
                     theme=theme,
                     domain=domain,
                     analyze_domain=analyze_domain,
-                    processing_info={'generated_config': config_result},
+                    generated_config=config_result,
                     user_ip=user_ip,
                     user_agent=request.headers.get('User-Agent', 'Dashboard'),
                     success=True
