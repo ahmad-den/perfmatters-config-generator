@@ -300,7 +300,7 @@ config_generator = PerfmattersConfigGenerator()
 
 def is_authenticated():
     """Check if user is authenticated via session"""
-    return session.get('authenticated', False) and session.get('auth_token') == get_auth_token()
+    return session.get('authenticated', False)
 
 def require_auth(f):
     """Decorator to require authentication"""
@@ -311,11 +311,6 @@ def require_auth(f):
         return f(*args, **kwargs)
     return decorated
 
-def get_auth_token():
-    """Generate a secure auth token based on session and server secret"""
-    session_id = session.get('session_id', '')
-    server_secret = app.secret_key
-    return bcrypt.hashpw((session_id + server_secret).encode('utf-8'), bcrypt.gensalt()).decode('utf-8')[:32]
 
 def verify_password(password):
     """Verify password securely"""
@@ -323,7 +318,11 @@ def verify_password(password):
     
     # If stored password is already hashed (starts with $2b$), verify against hash
     if stored_password.startswith('$2b$'):
-        return bcrypt.checkpw(password.encode('utf-8'), stored_password.encode('utf-8'))
+        try:
+            return bcrypt.checkpw(password.encode('utf-8'), stored_password.encode('utf-8'))
+        except Exception as e:
+            logger.error(f"Error verifying hashed password: {e}")
+            return False
     else:
         # For backward compatibility, compare plain text but recommend hashing
         logger.warning("Dashboard password is stored in plain text. Consider hashing it.")
@@ -419,13 +418,15 @@ def login():
     if request.method == 'POST':
         password = request.form.get('password', '')
         
+        logger.info(f"Login attempt from IP: {get_client_ip()}")
+        
         if verify_password(password):
             # Generate secure session
             session_id = secrets.token_hex(16)
             session['session_id'] = session_id
             session['authenticated'] = True
-            session['auth_token'] = get_auth_token()
             session.permanent = True  # Make session persistent
+            logger.info(f"Successful login from IP: {get_client_ip()}")
             return redirect(url_for('dashboard'))
         else:
             logger.warning(f"Failed login attempt from IP: {get_client_ip()}")
