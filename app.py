@@ -9,13 +9,11 @@ import requests
 from bs4 import BeautifulSoup
 from flask import Flask, request, jsonify, Response
 from flask import Flask, request, jsonify, Response, send_file, session
-from flask import Flask, request, jsonify, Response, send_file, session
 from typing import Dict, List, Optional, Tuple, Any
 import tempfile
 from dotenv import load_dotenv
 from ad_detector import AdProviderDetector
 from usage_logger import UsageLogger
-from dashboard import DashboardManager
 from dashboard import DashboardManager
 
 # Load environment variables from .env file
