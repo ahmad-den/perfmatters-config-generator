@@ -7,10 +7,10 @@ from datetime import datetime
 from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
-from flask import Flask, request, jsonify, Response
-from flask import Flask, request, jsonify, Response, send_file
+from flask import Flask, request, jsonify, Response, send_file, render_template, send_from_directory
 from typing import Dict, List, Optional, Tuple, Any
 import tempfile
+import glob
 from dotenv import load_dotenv
 from ad_detector import AdProviderDetector
 from usage_logger import UsageLogger
@@ -286,6 +286,10 @@ class PerfmattersConfigGenerator:
 config_generator = PerfmattersConfigGenerator()
 usage_logger = UsageLogger()
 
+# Create configs directory for storing generated files
+CONFIGS_DIR = os.path.join(os.getcwd(), 'generated_configs')
+os.makedirs(CONFIGS_DIR, exist_ok=True)
+
 def get_client_ip():
     """Get client IP address from request headers"""
     if request.headers.get('X-Forwarded-For'):
@@ -384,21 +388,46 @@ def generate_config():
         )
         
         # Prepare response
-        # Create a temporary file with the JSON config
-        temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
-        json.dump(config_result, temp_file, separators=(',', ':'), ensure_ascii=False, indent=2)
-        temp_file.close()
+        # Save the config file with metadata
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        client_ip = get_client_ip()
+        
+        # Create filename with timestamp and domain
+        domain_clean = domain.replace('https://', '').replace('http://', '').replace('/', '_') if domain else 'no-domain'
+        filename = f"perfmatters-config-{timestamp}-{domain_clean}.json"
+        config_path = os.path.join(CONFIGS_DIR, filename)
+        
+        # Add metadata to the config
+        config_with_metadata = {
+            'metadata': {
+                'generated_at': datetime.now().isoformat(),
+                'domain': domain,
+                'client_ip': client_ip,
+                'plugins': plugins,
+                'theme': theme,
+                'themes': themes,
+                'theme_parent': theme_parent,
+                'theme_child': theme_child,
+                'analyze_domain': analyze_domain,
+                'detected_ad_providers': detected_ad_providers
+            },
+            'config': config_result
+        }
+        
+        # Save to file
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(config_with_metadata, f, separators=(',', ':'), ensure_ascii=False, indent=2)
         
         # Generate filename based on plugins and theme
         plugins_str = '-'.join(plugins[:3]) if plugins else 'no-plugins'  # Limit to first 3 plugins
         theme_str = theme if theme else 'no-theme'
-        filename = f"perfmatters-config-{plugins_str}-{theme_str}.json"
+        download_filename = f"perfmatters-config-{plugins_str}-{theme_str}.json"
         
         # Return the file as download
         return send_file(
-            temp_file.name,
+            config_path,
             as_attachment=True,
-            download_name=filename,
+            download_name=download_filename,
             mimetype='application/json'
         )
         
