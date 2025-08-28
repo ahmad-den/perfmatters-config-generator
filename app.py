@@ -305,7 +305,7 @@ def save_generated_config(config_data, metadata):
     """Save generated configuration with metadata"""
     try:
         # Use absolute path for production
-        config_dir = '/opt/perfmatters-api/generated_configs'
+        config_dir = '/var/lib/perfmatters-api/generated_configs'
         os.makedirs(config_dir, exist_ok=True)
         
         # Generate filename with timestamp
@@ -335,7 +335,7 @@ def load_saved_configs():
     configs = []
     
     try:
-        config_dir = '/opt/perfmatters-api/generated_configs'
+        config_dir = '/var/lib/perfmatters-api/generated_configs'
         config_files = glob.glob(os.path.join(config_dir, 'perfmatters_config_*.json'))
         config_files.sort(key=os.path.getmtime, reverse=True)  # Most recent first
         
@@ -395,7 +395,7 @@ def download_config(filename):
             abort(404)
         
         config_dir = 'generated_configs'
-        config_dir = '/opt/perfmatters-api/generated_configs'
+        config_dir = '/var/lib/perfmatters-api/generated_configs'
         filepath = os.path.join(config_dir, filename)
         
         if not os.path.exists(filepath):
