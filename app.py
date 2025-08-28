@@ -7,6 +7,16 @@ import requests
 from ad_detector import AdProviderDetector
 from usage_logger import UsageLogger
 import glob
+import re
+import copy
+from urllib.parse import urljoin, urlparse
+from bs4 import BeautifulSoup
+from typing import Dict, List, Optional, Tuple, Any
+import tempfile
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
@@ -23,34 +33,264 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 usage_logger = UsageLogger()
 
-# Global variables for configuration
-optimization_dictionary = {}
-default_template = {}
+class PerfmattersConfigGenerator:
+    """Main class for generating Perfmatters configurations"""
 
-def load_configuration():
-    """Load optimization dictionary and default template"""
-    global optimization_dictionary, default_template
-    
-    try:
-        # Load optimization dictionary
-        with open('config/optimization_dictionary.json', 'r') as f:
-            optimization_dictionary = json.load(f)
-        logger.info("Optimization dictionary loaded successfully")
-        
-        # Load default template
-        with open('templates/default_template.json', 'r') as f:
-            default_template = json.load(f)
-        logger.info("Default template loaded successfully")
-        
-    except FileNotFoundError as e:
-        logger.error(f"Configuration file not found: {e}")
-        # Initialize with empty configuration
-        optimization_dictionary = {"plugins": {}, "themes": {}}
-        default_template = {"perfmatters_options": {}, "perfmatters_tools": {}}
-    except json.JSONDecodeError as e:
-        logger.error(f"Invalid JSON in configuration file: {e}")
-        optimization_dictionary = {"plugins": {}, "themes": {}}
-        default_template = {"perfmatters_options": {}, "perfmatters_tools": {}}
+    def __init__(self):
+        self.template_string = ""
+        self.rucss_dict = {}
+        self.delayjs_dict = {}
+        self.js_dict = {}
+        self.ad_detector = AdProviderDetector()
+        self.load_configurations()
+
+    def load_configurations(self):
+        """Load default template and optimization dictionaries from files"""
+        try:
+            # Load default template
+            template_path = os.path.join('templates', 'default_template.json')
+            with open(template_path, 'r', encoding='utf-8') as f:
+                self.template_string = f.read().strip()
+            logger.info("Default template loaded successfully")
+
+            # Load RUCSS dictionary
+            rucss_path = os.path.join('config', 'dictionary_rucss.json')
+            with open(rucss_path, 'r', encoding='utf-8') as f:
+                self.rucss_dict = json.load(f)
+            logger.info("RUCSS dictionary loaded successfully")
+
+            # Load Delay JS dictionary
+            delayjs_path = os.path.join('config', 'dictionary_delayjs.json')
+            with open(delayjs_path, 'r', encoding='utf-8') as f:
+                self.delayjs_dict = json.load(f)
+            logger.info("Delay JS dictionary loaded successfully")
+
+            # Load JS dictionary
+            js_path = os.path.join('config', 'dictionary_js.json')
+            with open(js_path, 'r', encoding='utf-8') as f:
+                self.js_dict = json.load(f)
+            logger.info("JS dictionary loaded successfully")
+
+        except FileNotFoundError as e:
+            logger.error(f"Configuration file not found: {e}")
+            raise
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON in configuration file: {e}")
+            raise
+
+    def generate_config(self, plugins: List[str], theme: str, domain: Optional[str] = None,
+                       analyze_domain: bool = False, themes: Optional[List[str]] = None,
+                       theme_parent: Optional[str] = None, theme_child: Optional[str] = None) -> Dict[str, Any]:
+        """Generate Perfmatters configuration based on plugins, theme, and optional domain analysis"""
+
+        processing_info = {
+            'plugins_processed': 0,
+            'themes_processed': 0
+        }
+
+        # Collect all exclusions
+        js_exclusions = []
+        delay_js_exclusions = []
+        rucss_excluded_stylesheets = []
+        rucss_excluded_selectors = []
+        minify_css_exclusions = []
+        minify_js_exclusions = []
+
+        # Apply universal exclusions from RUCSS dictionary
+        rucss_universal = self.rucss_dict.get('universal', {})
+        rucss_excluded_stylesheets.extend(rucss_universal.get('rucss_excluded_stylesheets', []))
+
+        # Apply universal exclusions from Delay JS dictionary
+        delayjs_universal = self.delayjs_dict.get('universal', {})
+        delay_js_exclusions.extend(delayjs_universal.get('delay_js_exclusions', []))
+
+        # Apply universal exclusions from JS dictionary
+        js_universal = self.js_dict.get('universal', {})
+        js_exclusions.extend(js_universal.get('js_exclusions', []))
+
+        # Analyze domain for ad providers if requested
+        detected_ad_providers = []
+        if analyze_domain and domain:
+            logger.info(f"Analyzing domain for ad providers: {domain}")
+            ad_exclusions = self.ad_detector.get_ad_exclusions(domain)
+            if any(ad_exclusions.values()):
+                logger.info("Applied ad provider exclusions based on detection")
+                js_exclusions.extend(ad_exclusions['js_exclusions'])
+                rucss_excluded_stylesheets.extend(ad_exclusions['rucss_exclusions'])
+                delay_js_exclusions.extend(ad_exclusions['delay_js_exclusions'])
+                rucss_excluded_selectors.extend(ad_exclusions['rucss_excluded_selectors'])
+                minify_css_exclusions.extend(ad_exclusions['minify_css_exclusions'])
+                minify_js_exclusions.extend(ad_exclusions['minify_js_exclusions'])
+
+        # Process plugins
+        for plugin in plugins:
+            # Get RUCSS exclusions for plugin
+            rucss_plugin_settings = self._get_plugin_rucss_optimizations(plugin)
+            if rucss_plugin_settings:
+                rucss_excluded_stylesheets.extend(rucss_plugin_settings.get('rucss_excluded_stylesheets', []))
+                processing_info['plugins_processed'] += 1
+
+            # Get Delay JS exclusions for plugin
+            delayjs_plugin_settings = self._get_plugin_delayjs_optimizations(plugin)
+            if delayjs_plugin_settings:
+                delay_js_exclusions.extend(delayjs_plugin_settings.get('delay_js_exclusions', []))
+
+            # Get JS exclusions for plugin
+            js_plugin_settings = self._get_plugin_js_optimizations(plugin)
+            if js_plugin_settings:
+                js_exclusions.extend(js_plugin_settings.get('js_exclusions', []))
+
+        # Process themes (multiple theme support)
+        themes_to_process = []
+
+        if themes:
+            # Use the themes array if provided
+            themes_to_process = themes
+        else:
+            # Fallback to individual theme fields for backward compatibility
+            if theme_parent:
+                themes_to_process.append(theme_parent)
+            if theme_child and theme_child != theme_parent:
+                themes_to_process.append(theme_child)
+            if not themes_to_process and theme:
+                themes_to_process.append(theme)
+
+        # Remove duplicates while preserving order
+        seen = set()
+        themes_to_process = [t for t in themes_to_process if not (t in seen or seen.add(t))]
+
+        # Process each theme
+        for theme_name in themes_to_process:
+            # Get RUCSS exclusions for theme
+            rucss_theme_settings = self._get_theme_rucss_optimizations(theme_name)
+            if rucss_theme_settings:
+                rucss_excluded_stylesheets.extend(rucss_theme_settings.get('rucss_excluded_stylesheets', []))
+                processing_info['themes_processed'] += 1
+
+            # Get Delay JS exclusions for theme
+            delayjs_theme_settings = self._get_theme_delayjs_optimizations(theme_name)
+            if delayjs_theme_settings:
+                delay_js_exclusions.extend(delayjs_theme_settings.get('delay_js_exclusions', []))
+
+            # Get JS exclusions for theme
+            js_theme_settings = self._get_theme_js_optimizations(theme_name)
+            if js_theme_settings:
+                js_exclusions.extend(js_theme_settings.get('js_exclusions', []))
+
+        # Parse template and update directly
+        try:
+            final_config = json.loads(self.template_string)
+        except json.JSONDecodeError as e:
+            logger.error(f"Error parsing template JSON at position {e.pos}: {e.msg}")
+            raise
+
+        # Update the assets section with collected exclusions
+        assets = final_config['perfmatters_options']['assets']
+        assets['js_exclusions'] = '\n'.join(list(dict.fromkeys(js_exclusions)))
+        assets['delay_js_exclusions'] = '\n'.join(list(dict.fromkeys(delay_js_exclusions)))
+        assets['rucss_excluded_stylesheets'] = '\n'.join(list(dict.fromkeys(rucss_excluded_stylesheets)))
+        assets['rucss_excluded_selectors'] = '\n'.join(list(dict.fromkeys(rucss_excluded_selectors)))
+        assets['minify_css_exclusions'] = '\n'.join(list(dict.fromkeys(minify_css_exclusions)))
+        assets['minify_js_exclusions'] = '\n'.join(list(dict.fromkeys(minify_js_exclusions)))
+
+        # Special handling for Kadence themes - disable remove_comment_urls
+        if self._is_kadence_theme(themes_to_process):
+            final_config['perfmatters_options']['remove_comment_urls'] = ""
+            logger.info("Kadence theme detected - disabled remove_comment_urls")
+
+        # Return the complete configuration with processing info
+        return {
+            'config': final_config,
+            'processing_info': processing_info,
+            'detected_ad_providers': detected_ad_providers
+        }
+
+    def _get_plugin_rucss_optimizations(self, plugin: str) -> Optional[Dict[str, Any]]:
+        """Get RUCSS optimizations for a specific plugin"""
+        plugins_config = self.rucss_dict.get('plugins', {})
+        plugin_key = self._normalize_plugin_name(plugin)
+
+        if plugin_key in plugins_config:
+            logger.info(f"Applied RUCSS optimizations for plugin: {plugin}")
+            return plugins_config[plugin_key]
+
+        return None
+
+    def _get_plugin_delayjs_optimizations(self, plugin: str) -> Optional[Dict[str, Any]]:
+        """Get Delay JS optimizations for a specific plugin"""
+        plugins_config = self.delayjs_dict.get('plugins', {})
+        plugin_key = self._normalize_plugin_name(plugin)
+
+        if plugin_key in plugins_config:
+            logger.info(f"Applied Delay JS optimizations for plugin: {plugin}")
+            return plugins_config[plugin_key]
+
+        return None
+
+    def _get_plugin_js_optimizations(self, plugin: str) -> Optional[Dict[str, Any]]:
+        """Get JS optimizations for a specific plugin"""
+        plugins_config = self.js_dict.get('plugins', {})
+        plugin_key = self._normalize_plugin_name(plugin)
+
+        if plugin_key in plugins_config:
+            logger.info(f"Applied JS optimizations for plugin: {plugin}")
+            return plugins_config[plugin_key]
+
+        return None
+
+    def _get_theme_rucss_optimizations(self, theme: str) -> Optional[Dict[str, Any]]:
+        """Get RUCSS optimizations for a specific theme"""
+        themes_config = self.rucss_dict.get('themes', {})
+        theme_key = self._normalize_theme_name(theme)
+
+        if theme_key in themes_config:
+            logger.info(f"Applied RUCSS optimizations for theme: {theme}")
+            return themes_config[theme_key]
+
+        return None
+
+    def _get_theme_delayjs_optimizations(self, theme: str) -> Optional[Dict[str, Any]]:
+        """Get Delay JS optimizations for a specific theme"""
+        themes_config = self.delayjs_dict.get('themes', {})
+        theme_key = self._normalize_theme_name(theme)
+
+        if theme_key in themes_config:
+            logger.info(f"Applied Delay JS optimizations for theme: {theme}")
+            return themes_config[theme_key]
+
+        return None
+
+    def _get_theme_js_optimizations(self, theme: str) -> Optional[Dict[str, Any]]:
+        """Get JS optimizations for a specific theme"""
+        themes_config = self.js_dict.get('themes', {})
+        theme_key = self._normalize_theme_name(theme)
+
+        if theme_key in themes_config:
+            logger.info(f"Applied JS optimizations for theme: {theme}")
+            return themes_config[theme_key]
+
+        return None
+
+    def _normalize_plugin_name(self, plugin: str) -> str:
+        """Normalize plugin name for dictionary lookup"""
+        # Remove version numbers and common suffixes
+        plugin = re.sub(r'/.*$', '', plugin)  # Remove path after plugin name
+        plugin = re.sub(r'\s+\d+.*$', '', plugin)  # Remove version numbers
+        return plugin.lower().replace(' ', '-').replace('_', '-')
+
+    def _normalize_theme_name(self, theme: str) -> str:
+        """Normalize theme name for dictionary lookup"""
+        return theme.lower().replace(' ', '-').replace('_', '-')
+
+    def _is_kadence_theme(self, themes: List[str]) -> bool:
+        """Check if any of the themes is Kadence-based"""
+        for theme in themes:
+            if 'kadence' in theme.lower():
+                return True
+        return False
+
+# Global instance
+config_generator = PerfmattersConfigGenerator()
 
 def get_client_ip():
     """Get client IP address from request headers"""
@@ -207,8 +447,7 @@ def api_configs():
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
-    usage_logger.log_health_check(get_client_ip())
-    
+    usage_logger.log_health_check(user_ip=get_client_ip())
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
@@ -217,10 +456,10 @@ def health_check():
 
 @app.route('/generate-config', methods=['POST'])
 def generate_config():
-    """Generate Perfmatters configuration based on plugins and theme"""
+    """Main endpoint to generate Perfmatters configuration"""
     client_ip = get_client_ip()
     user_agent = request.headers.get('User-Agent', 'Unknown')
-    
+
     try:
         # Validate request data
         if not request.is_json:
@@ -252,106 +491,21 @@ def generate_config():
                 'success': False,
                 'error': 'plugins must be an array'
             }), 400
+
+        # Generate configuration using the config generator
+        result = config_generator.generate_config(
+            plugins=plugins,
+            theme=theme,
+            themes=themes,
+            theme_parent=theme_parent,
+            theme_child=theme_child,
+            domain=domain,
+            analyze_domain=analyze_domain
+        )
         
-        # Create a copy of the default template
-        config = json.loads(json.dumps(default_template))
-        
-        # Initialize exclusion lists
-        js_exclusions = []
-        delay_js_exclusions = []
-        rucss_excluded_stylesheets = []
-        rucss_excluded_selectors = []
-        minify_css_exclusions = []
-        minify_js_exclusions = []
-        
-        # Add universal exclusions
-        universal = optimization_dictionary.get('universal', {})
-        js_exclusions.extend(universal.get('js_exclusions', []))
-        delay_js_exclusions.extend(universal.get('delay_js_exclusions', []))
-        rucss_excluded_stylesheets.extend(universal.get('rucss_excluded_stylesheets', []))
-        rucss_excluded_selectors.extend(universal.get('rucss_excluded_selectors', []))
-        minify_css_exclusions.extend(universal.get('minify_css_exclusions', []))
-        minify_js_exclusions.extend(universal.get('minify_js_exclusions', []))
-        
-        # Process plugins
-        plugins_processed = 0
-        plugin_configs = optimization_dictionary.get('plugins', {})
-        
-        for plugin in plugins:
-            if plugin in plugin_configs:
-                plugin_config = plugin_configs[plugin]
-                js_exclusions.extend(plugin_config.get('js_exclusions', []))
-                delay_js_exclusions.extend(plugin_config.get('delay_js_exclusions', []))
-                rucss_excluded_stylesheets.extend(plugin_config.get('rucss_excluded_stylesheets', []))
-                rucss_excluded_selectors.extend(plugin_config.get('rucss_excluded_selectors', []))
-                minify_css_exclusions.extend(plugin_config.get('minify_css_exclusions', []))
-                minify_js_exclusions.extend(plugin_config.get('minify_js_exclusions', []))
-                plugins_processed += 1
-        
-        # Process themes (support multiple themes)
-        themes_processed = 0
-        theme_configs = optimization_dictionary.get('themes', {})
-        
-        for theme_name in themes:
-            if theme_name in theme_configs:
-                theme_config = theme_configs[theme_name]
-                js_exclusions.extend(theme_config.get('js_exclusions', []))
-                delay_js_exclusions.extend(theme_config.get('delay_js_exclusions', []))
-                rucss_excluded_stylesheets.extend(theme_config.get('rucss_excluded_stylesheets', []))
-                rucss_excluded_selectors.extend(theme_config.get('rucss_excluded_selectors', []))
-                minify_css_exclusions.extend(theme_config.get('minify_css_exclusions', []))
-                minify_js_exclusions.extend(theme_config.get('minify_js_exclusions', []))
-                themes_processed += 1
-        
-        # Domain analysis for ad providers
-        detected_ad_providers = []
-        if analyze_domain and domain:
-            try:
-                ad_detector = AdProviderDetector()
-                ad_exclusions = ad_detector.get_ad_exclusions(domain, timeout=10)
-                
-                # Add ad provider exclusions
-                js_exclusions.extend(ad_exclusions.get('js_exclusions', []))
-                delay_js_exclusions.extend(ad_exclusions.get('delay_js_exclusions', []))
-                rucss_excluded_stylesheets.extend(ad_exclusions.get('rucss_exclusions', []))
-                rucss_excluded_selectors.extend(ad_exclusions.get('rucss_excluded_selectors', []))
-                minify_css_exclusions.extend(ad_exclusions.get('minify_css_exclusions', []))
-                minify_js_exclusions.extend(ad_exclusions.get('minify_js_exclusions', []))
-                
-                # Track detected providers (this would need to be implemented in ad_detector)
-                # For now, we'll leave this empty
-                detected_ad_providers = []
-                
-            except Exception as e:
-                logger.error(f"Domain analysis failed for {domain}: {e}")
-        
-        # Remove duplicates and convert to newline-separated strings
-        js_exclusions = '\n'.join(list(dict.fromkeys(js_exclusions)))
-        delay_js_exclusions = '\n'.join(list(dict.fromkeys(delay_js_exclusions)))
-        rucss_excluded_stylesheets = '\n'.join(list(dict.fromkeys(rucss_excluded_stylesheets)))
-        rucss_excluded_selectors = '\n'.join(list(dict.fromkeys(rucss_excluded_selectors)))
-        minify_css_exclusions = '\n'.join(list(dict.fromkeys(minify_css_exclusions)))
-        minify_js_exclusions = '\n'.join(list(dict.fromkeys(minify_js_exclusions)))
-        
-        # Update configuration
-        if 'perfmatters_options' not in config:
-            config['perfmatters_options'] = {}
-        if 'assets' not in config['perfmatters_options']:
-            config['perfmatters_options']['assets'] = {}
-        
-        config['perfmatters_options']['assets']['js_exclusions'] = js_exclusions
-        config['perfmatters_options']['assets']['delay_js_exclusions'] = delay_js_exclusions
-        config['perfmatters_options']['assets']['rucss_excluded_stylesheets'] = rucss_excluded_stylesheets
-        config['perfmatters_options']['assets']['rucss_excluded_selectors'] = rucss_excluded_selectors
-        config['perfmatters_options']['assets']['minify_css_exclusions'] = minify_css_exclusions
-        config['perfmatters_options']['assets']['minify_js_exclusions'] = minify_js_exclusions
-        
-        # Prepare response
-        processing_info = {
-            'plugins_processed': plugins_processed,
-            'themes_processed': themes_processed,
-            'theme_processed': themes_processed > 0  # Legacy field for backward compatibility
-        }
+        config = result['config']
+        processing_info = result['processing_info']
+        detected_ad_providers = result['detected_ad_providers']
         
         generated_at = datetime.now().isoformat()
         
@@ -424,41 +578,106 @@ def generate_config():
 
 @app.route('/reload-config', methods=['POST'])
 def reload_config():
-    """Reload configuration files"""
+    """Reload configuration files without restarting server"""
     client_ip = get_client_ip()
-    
     try:
-        load_configuration()
-        usage_logger.log_config_reload(client_ip, success=True)
-        
+        config_generator.load_configurations()
+        usage_logger.log_config_reload(user_ip=client_ip, success=True)
         return jsonify({
             'success': True,
             'message': 'Configuration files reloaded successfully',
             'timestamp': datetime.now().isoformat()
         })
-        
     except Exception as e:
-        logger.error(f"Error reloading configuration: {e}")
-        usage_logger.log_config_reload(client_ip, success=False, error_message=str(e))
-        
+        logger.error(f"Error reloading config: {e}")
+        usage_logger.log_config_reload(user_ip=client_ip, success=False, error_message=str(e))
         return jsonify({
             'success': False,
-            'error': 'Failed to reload configuration'
+            'error': str(e)
         }), 500
 
-# Initialize configuration on startup
-load_configuration()
+@app.route('/detect-ads', methods=['POST'])
+def detect_ads():
+    """Endpoint to detect ad providers from a URL"""
+    client_ip = get_client_ip()
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid JSON data'
+            }), 400
+
+        url = data.get('url', '')
+
+        if not url:
+            usage_logger.log_ad_detection(
+                domain='',
+                detected_providers=[],
+                user_ip=client_ip,
+                success=False,
+                error_message='URL is required'
+            )
+            return jsonify({
+                'success': False,
+                'error': 'URL is required'
+            }), 400
+
+        # Detect ad providers
+        result = config_generator.ad_detector.get_ad_exclusions(url)
+
+        # Log ad detection usage
+        usage_logger.log_ad_detection(
+            domain=url,
+            detected_providers=[],  # Ad detector doesn't return provider names in current implementation
+            user_ip=client_ip,
+            success=True
+        )
+
+        return jsonify({
+            'success': True,
+            'exclusions': result
+        })
+
+    except Exception as e:
+        logger.error(f"Error detecting ads: {e}")
+        usage_logger.log_ad_detection(
+            domain=url if 'url' in locals() else 'Unknown',
+            detected_providers=[],
+            user_ip=client_ip,
+            success=False,
+            error_message=str(e)
+        )
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({
+        'success': False,
+        'error': 'Endpoint not found'
+    }), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return jsonify({
+        'success': False,
+        'error': 'Internal server error'
+    }), 500
 
 if __name__ == '__main__':
-    # Create necessary directories
-    os.makedirs('logs', exist_ok=True)
-    os.makedirs('config', exist_ok=True)
+    # Create directories if they don't exist
     os.makedirs('templates', exist_ok=True)
+    os.makedirs('config', exist_ok=True)
+    os.makedirs('logs', exist_ok=True)
     os.makedirs('generated_configs', exist_ok=True)
-    
+
     # Run the application
-    app.run(
-        host=os.getenv('HOST', '0.0.0.0'),
-        port=int(os.getenv('PORT', 8080)),
-        debug=os.getenv('DEBUG', 'False').lower() == 'true'
-    )
+    port = int(os.environ.get('PORT', 8080))
+    host = os.environ.get('HOST', '0.0.0.0')
+    debug = os.environ.get('DEBUG', 'False').lower() == 'true'
+
+    app.run(host=host, port=port, debug=debug)
