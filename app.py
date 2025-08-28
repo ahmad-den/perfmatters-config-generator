@@ -17,6 +17,8 @@ from dotenv import load_dotenv
 from functools import wraps
 from flask import session
 from flask import redirect, url_for
+import bcrypt
+import secrets
 
 # Load environment variables from .env file
 load_dotenv()
@@ -34,7 +36,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-change-this-in-production')
+app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
 usage_logger = UsageLogger()
 
 class PerfmattersConfigGenerator:
@@ -298,7 +300,7 @@ config_generator = PerfmattersConfigGenerator()
 
 def is_authenticated():
     """Check if user is authenticated via session"""
-    return session.get('authenticated', False)
+    return session.get('authenticated', False) and session.get('auth_token') == get_auth_token()
 
 def require_auth(f):
     """Decorator to require authentication"""
@@ -308,6 +310,24 @@ def require_auth(f):
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated
+
+def get_auth_token():
+    """Generate a secure auth token based on session and server secret"""
+    session_id = session.get('session_id', '')
+    server_secret = app.secret_key
+    return bcrypt.hashpw((session_id + server_secret).encode('utf-8'), bcrypt.gensalt()).decode('utf-8')[:32]
+
+def verify_password(password):
+    """Verify password securely"""
+    stored_password = os.getenv('DASHBOARD_PASSWORD', 'admin123')
+    
+    # If stored password is already hashed (starts with $2b$), verify against hash
+    if stored_password.startswith('$2b$'):
+        return bcrypt.checkpw(password.encode('utf-8'), stored_password.encode('utf-8'))
+    else:
+        # For backward compatibility, compare plain text but recommend hashing
+        logger.warning("Dashboard password is stored in plain text. Consider hashing it.")
+        return password == stored_password
 
 def get_client_ip():
     """Get client IP address from request headers"""
@@ -398,12 +418,17 @@ def login():
     
     if request.method == 'POST':
         password = request.form.get('password', '')
-        dashboard_password = os.getenv('DASHBOARD_PASSWORD', 'admin123')
         
-        if password == dashboard_password:
+        if verify_password(password):
+            # Generate secure session
+            session_id = secrets.token_hex(16)
+            session['session_id'] = session_id
             session['authenticated'] = True
+            session['auth_token'] = get_auth_token()
+            session.permanent = True  # Make session persistent
             return redirect(url_for('dashboard'))
         else:
+            logger.warning(f"Failed login attempt from IP: {get_client_ip()}")
             return render_template('login.html', error='Invalid password')
     
     return render_template('login.html')
@@ -411,7 +436,7 @@ def login():
 @app.route('/logout')
 def logout():
     """Logout and clear session"""
-    session.pop('authenticated', None)
+    session.clear()
     return redirect(url_for('login'))
 
 @app.route('/')
