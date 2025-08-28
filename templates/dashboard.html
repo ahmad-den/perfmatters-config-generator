@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Perfmatters Config Generator{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h1>🚀 Perfmatters Config Generator</h1>
+    <p>Generate optimized Perfmatters configurations for your WordPress site</p>
+</div>
+
+<div class="card">
+    <form id="configForm">
+        <div class="form-group">
+            <label for="domain">Website Domain (optional):</label>
+            <input type="url" id="domain" name="domain" class="form-control" placeholder="https://example.com">
+            <small style="color: #718096; margin-top: 5px; display: block;">
+                Enter your website URL to analyze for ad providers and additional optimizations
+            </small>
+        </div>
+        
+        <div class="form-group">
+            <label for="plugins">Active Plugins (one per line):</label>
+            <textarea id="plugins" name="plugins" class="form-control" rows="8" placeholder="woocommerce&#10;elementor&#10;contact-form-7&#10;yoast-seo"></textarea>
+            <small style="color: #718096; margin-top: 5px; display: block;">
+                Enter each plugin name on a new line. Use the plugin folder name (e.g., "woocommerce" not "WooCommerce")
+            </small>
+        </div>
+        
+        <div class="form-group">
+            <label for="theme">Active Theme:</label>
+            <input type="text" id="theme" name="theme" class="form-control" placeholder="astra">
+            <small style="color: #718096; margin-top: 5px; display: block;">
+                Enter your theme name (e.g., "astra", "generatepress", "divi")
+            </small>
+        </div>
+        
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="analyze_domain" name="analyze_domain" style="margin-right: 8px;">
+                Analyze domain for ad providers
+            </label>
+            <small style="color: #718096; margin-top: 5px; display: block;">
+                Check this to automatically detect ad providers and apply appropriate exclusions
+            </small>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Generate Configuration</button>
+    </form>
+    
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Generating your Perfmatters configuration...</p>
+    </div>
+    
+    <div id="result" style="display: none;">
+        <div class="config-preview">
+            <h4>✅ Configuration Generated Successfully!</h4>
+            <div class="config-info" id="configInfo"></div>
+            <a id="downloadBtn" href="#" class="btn btn-primary" download>Download Configuration</a>
+            <button type="button" class="btn btn-secondary" onclick="resetForm()" style="margin-left: 10px;">Generate Another</button>
+        </div>
+    </div>
+    
+    <div id="error" class="alert alert-error" style="display: none;"></div>
+</div>
+
+<div class="card">
+    <h3 style="margin-bottom: 15px;">📋 How to Use</h3>
+    <ol style="line-height: 1.6; color: #4a5568;">
+        <li><strong>Enter your website domain</strong> (optional) - This helps detect ad providers automatically</li>
+        <li><strong>List your active plugins</strong> - One plugin name per line, use the folder name</li>
+        <li><strong>Enter your theme name</strong> - Use the theme folder name</li>
+        <li><strong>Click Generate</strong> - The system will create an optimized configuration</li>
+        <li><strong>Download the JSON file</strong> - Import it into Perfmatters → Tools → Import Settings</li>
+    </ol>
+</div>
+
+<div class="card">
+    <h3 style="margin-bottom: 15px;">🔧 Import Instructions</h3>
+    <ol style="line-height: 1.6; color: #4a5568;">
+        <li>Go to your WordPress admin dashboard</li>
+        <li>Navigate to <strong>Perfmatters → Tools</strong></li>
+        <li>Click <strong>"Import Settings"</strong></li>
+        <li>Upload or paste the downloaded JSON configuration</li>
+        <li>Click <strong>"Import"</strong> to apply the settings</li>
+    </ol>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('configForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const form = e.target;
+    const formData = new FormData(form);
+    
+    // Show loading
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('result').style.display = 'none';
+    document.getElementById('error').style.display = 'none';
+    form.style.display = 'none';
+    
+    // Prepare data
+    const plugins = formData.get('plugins').split('\n').filter(p => p.trim()).map(p => p.trim());
+    const theme = formData.get('theme').trim();
+    const domain = formData.get('domain').trim();
+    const analyze_domain = formData.has('analyze_domain');
+    
+    try {
+        const response = await fetch('/api/generate-dashboard-config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                plugins: plugins,
+                theme: theme,
+                domain: domain,
+                analyze_domain: analyze_domain
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Show success
+            const configInfo = document.getElementById('configInfo');
+            configInfo.innerHTML = `
+                <div><strong>Plugins:</strong> ${result.config_preview.plugins_count}</div>
+                <div><strong>Theme:</strong> ${result.config_preview.theme || 'None'}</div>
+                <div><strong>Domain:</strong> ${result.config_preview.domain || 'Not specified'}</div>
+                <div><strong>Generated:</strong> ${new Date(result.config_preview.generated_at).toLocaleString()}</div>
+            `;
+            
+            document.getElementById('downloadBtn').href = result.download_url;
+            document.getElementById('result').style.display = 'block';
+        } else {
+            throw new Error(result.error || 'Unknown error occurred');
+        }
+    } catch (error) {
+        // Show error
+        document.getElementById('error').textContent = 'Error: ' + error.message;
+        document.getElementById('error').style.display = 'block';
+        form.style.display = 'block';
+    }
+    
+    // Hide loading
+    document.getElementById('loading').style.display = 'none';
+});
+
+function resetForm() {
+    document.getElementById('configForm').style.display = 'block';
+    document.getElementById('result').style.display = 'none';
+    document.getElementById('error').style.display = 'none';
+    document.getElementById('configForm').reset();
+}
+</script>
+{% endblock %}

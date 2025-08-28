@@ -8,12 +8,13 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 from flask import Flask, request, jsonify, Response
-from flask import Flask, request, jsonify, Response, send_file
+from flask import Flask, request, jsonify, Response, send_file, session
 from typing import Dict, List, Optional, Tuple, Any
 import tempfile
 from dotenv import load_dotenv
 from ad_detector import AdProviderDetector
 from usage_logger import UsageLogger
+from dashboard import DashboardManager
 
 # Load environment variables from .env file
 load_dotenv()
@@ -26,6 +27,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-change-this-in-production')
+
+# Initialize dashboard manager
+dashboard_manager = None
 
 class PerfmattersConfigGenerator:
     """Main class for generating Perfmatters configurations"""
@@ -285,6 +290,10 @@ class PerfmattersConfigGenerator:
 # Global instance
 config_generator = PerfmattersConfigGenerator()
 usage_logger = UsageLogger()
+
+# Initialize dashboard after config_generator is created
+dashboard_manager = DashboardManager(config_generator, usage_logger)
+dashboard_manager.setup_routes(app)
 
 def get_client_ip():
     """Get client IP address from request headers"""

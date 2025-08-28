@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Perfmatters Config Generator{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h1>🔐 Dashboard Login</h1>
+    <p>Enter your password to access the Perfmatters configuration generator</p>
+</div>
+
+<div class="card">
+    {% if error %}
+    <div class="alert alert-error">
+        {{ error }}
+    </div>
+    {% endif %}
+    
+    <form method="POST">
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" class="form-control" required autocomplete="current-password">
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Login</button>
+    </form>
+</div>
+{% endblock %}
