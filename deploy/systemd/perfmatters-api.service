@@ -23,7 +23,6 @@ PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
 ReadWritePaths=/opt/perfmatters-api/logs
-ReadWritePaths=/opt/perfmatters-api/generated_configs
 ReadWritePaths=/tmp
 
 [Install]
