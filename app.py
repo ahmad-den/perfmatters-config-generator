@@ -15,6 +15,8 @@ from typing import Dict, List, Optional, Tuple, Any
 import tempfile
 from dotenv import load_dotenv
 from functools import wraps
+from flask import session
+from flask import redirect, url_for
 
 # Load environment variables from .env file
 load_dotenv()
@@ -32,6 +34,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-change-this-in-production')
 usage_logger = UsageLogger()
 
 class PerfmattersConfigGenerator:
@@ -293,23 +296,16 @@ class PerfmattersConfigGenerator:
 # Global instance
 config_generator = PerfmattersConfigGenerator()
 
-def check_dashboard_auth():
-    """Check if user is authenticated for dashboard access"""
-    auth = request.authorization
-    dashboard_password = os.getenv('DASHBOARD_PASSWORD', 'admin123')
-    
-    if not auth or auth.password != dashboard_password:
-        return False
-    return True
+def is_authenticated():
+    """Check if user is authenticated via session"""
+    return session.get('authenticated', False)
 
-def require_dashboard_auth(f):
-    """Decorator to require authentication for dashboard routes"""
+def require_auth(f):
+    """Decorator to require authentication"""
     @wraps(f)
     def decorated(*args, **kwargs):
-        if not check_dashboard_auth():
-            return ('Dashboard access requires authentication', 401, {
-                'WWW-Authenticate': 'Basic realm="Dashboard Access Required"'
-            })
+        if not is_authenticated():
+            return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated
 
@@ -394,8 +390,32 @@ def load_saved_configs():
     
     return configs
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Login page for dashboard access"""
+    if is_authenticated():
+        return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        password = request.form.get('password', '')
+        dashboard_password = os.getenv('DASHBOARD_PASSWORD', 'admin123')
+        
+        if password == dashboard_password:
+            session['authenticated'] = True
+            return redirect(url_for('dashboard'))
+        else:
+            return render_template('login.html', error='Invalid password')
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    """Logout and clear session"""
+    session.pop('authenticated', None)
+    return redirect(url_for('login'))
+
 @app.route('/')
-@require_dashboard_auth
+@require_auth
 def dashboard():
     """Dashboard showing all generated configurations"""
     try:
@@ -453,7 +473,7 @@ def download_config(filename):
         abort(500)
 
 @app.route('/api/configs')
-@require_dashboard_auth
+@require_auth
 def api_configs():
     """API endpoint to get all configurations as JSON"""
     try:
