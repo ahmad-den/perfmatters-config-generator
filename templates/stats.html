@@ -94,29 +94,43 @@ async function loadUsageStats() {
         
         if (data.success) {
             // Update summary stats
-            document.getElementById('totalRequests').textContent = data.summary.total_requests;
-            document.getElementById('successfulRequests').textContent = data.summary.successful_requests;
-            document.getElementById('uniqueDomains').textContent = data.summary.unique_domains;
-            document.getElementById('uniqueIps').textContent = data.summary.unique_ips;
+            const totalRequests = document.getElementById('totalRequests');
+            const successfulRequests = document.getElementById('successfulRequests');
+            const uniqueDomains = document.getElementById('uniqueDomains');
+            const uniqueIps = document.getElementById('uniqueIps');
+            
+            if (totalRequests) totalRequests.textContent = data.summary.total_requests;
+            if (successfulRequests) successfulRequests.textContent = data.summary.successful_requests;
+            if (uniqueDomains) uniqueDomains.textContent = data.summary.unique_domains;
+            if (uniqueIps) uniqueIps.textContent = data.summary.unique_ips;
             
             // Store data
             allUsageData = data.recent_usage;
             applyFilters();
             
             // Show stats content
-            document.getElementById('statsLoading').style.display = 'none';
-            document.getElementById('statsContent').style.display = 'block';
+            const statsLoading = document.getElementById('statsLoading');
+            const statsContent = document.getElementById('statsContent');
+            
+            if (statsLoading) statsLoading.style.display = 'none';
+            if (statsContent) statsContent.style.display = 'block';
         }
     } catch (error) {
         console.error('Error loading usage stats:', error);
-        document.getElementById('statsLoading').innerHTML = '<div class="alert alert-error">Failed to load statistics</div>';
+        const statsLoading = document.getElementById('statsLoading');
+        if (statsLoading) {
+            statsLoading.innerHTML = '<div class="alert alert-error">Failed to load statistics</div>';
+        }
     }
 }
 
 // Apply search and status filters
 function applyFilters() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const statusFilter = document.getElementById('statusFilter').value;
+    const searchInput = document.getElementById('searchInput');
+    const statusFilterEl = document.getElementById('statusFilter');
+    
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+    const statusFilter = statusFilterEl ? statusFilterEl.value : '';
     
     filteredData = allUsageData.filter(usage => {
         // Search filter
@@ -247,21 +261,28 @@ function changePage(page) {
 
 // Clear all filters
 function clearFilters() {
-    document.getElementById('searchInput').value = '';
-    document.getElementById('statusFilter').value = '';
+    const searchInput = document.getElementById('searchInput');
+    const statusFilter = document.getElementById('statusFilter');
+    
+    if (searchInput) searchInput.value = '';
+    if (statusFilter) statusFilter.value = '';
     applyFilters();
 }
 
 // Event listeners
-document.getElementById('searchInput').addEventListener('input', applyFilters);
-document.getElementById('statusFilter').addEventListener('change', applyFilters);
-
-// Load stats on page load
 document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const statusFilter = document.getElementById('statusFilter');
+    
+    if (searchInput) searchInput.addEventListener('input', applyFilters);
+    if (statusFilter) statusFilter.addEventListener('change', applyFilters);
+    
+    // Load stats on page load
     loadUsageStats();
     
     // Refresh stats every 30 seconds
     setInterval(loadUsageStats, 30000);
 });
+
 </script>
 {% endblock %}
