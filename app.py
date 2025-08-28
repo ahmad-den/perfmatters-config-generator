@@ -299,10 +299,6 @@ usage_logger = UsageLogger()
 dashboard_manager = DashboardManager(config_generator, usage_logger)
 dashboard_manager.setup_routes(app)
 
-# Initialize dashboard after config_generator is created
-dashboard_manager = DashboardManager(config_generator, usage_logger)
-dashboard_manager.setup_routes(app)
-
 def get_client_ip():
     """Get client IP address from request headers"""
     if request.headers.get('X-Forwarded-For'):
