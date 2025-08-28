@@ -13,7 +13,8 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: #f8fafc;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             color: #334155;
             line-height: 1.6;
         }
@@ -26,16 +27,20 @@
         
         .header {
             background: white;
-            border-radius: 12px;
+            border-radius: 16px;
             padding: 2rem;
             margin-bottom: 2rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
         }
         
         .header h1 {
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: 700;
-            color: #1e293b;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             margin-bottom: 0.5rem;
         }
         
@@ -54,15 +59,25 @@
         .stat-card {
             background: white;
             padding: 1.5rem;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
             text-align: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
         }
         
         .stat-number {
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: 700;
-            color: #3b82f6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             display: block;
         }
         
@@ -74,19 +89,20 @@
         
         .configs-table {
             background: white;
-            border-radius: 12px;
+            border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
         }
         
         .table-header {
-            background: #f1f5f9;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
             padding: 1.5rem;
             border-bottom: 1px solid #e2e8f0;
         }
         
         .table-header h2 {
-            font-size: 1.25rem;
+            font-size: 1.5rem;
             font-weight: 600;
             color: #1e293b;
         }
@@ -104,7 +120,7 @@
         }
         
         .table th {
-            background: #f8fafc;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
             font-weight: 600;
             color: #475569;
             font-size: 0.875rem;
@@ -113,7 +129,7 @@
         }
         
         .table tr:hover {
-            background: #f8fafc;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
         }
         
         .domain-link {
@@ -127,7 +143,7 @@
         }
         
         .download-btn {
-            background: #3b82f6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 0.5rem 1rem;
             border: none;
@@ -136,26 +152,24 @@
             font-size: 0.875rem;
             font-weight: 500;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
         }
         
         .download-btn:hover {
-            background: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
         }
         
         .badge {
             display: inline-block;
             padding: 0.25rem 0.5rem;
-            background: #dbeafe;
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
             color: #1e40af;
-            border-radius: 4px;
+            border-radius: 6px;
             font-size: 0.75rem;
             font-weight: 500;
-        }
-        
-        .ad-providers {
-            font-size: 0.875rem;
-            color: #059669;
+            box-shadow: 0 2px 4px rgba(30, 64, 175, 0.1);
         }
         
         .no-configs {
@@ -208,12 +222,12 @@
                 <div class="stat-label">Total Configurations</div>
             </div>
             <div class="stat-card">
-                <span class="stat-number">{{ configs|selectattr('detected_ad_providers')|list|length }}</span>
-                <div class="stat-label">With Ad Providers</div>
+                <span class="stat-number">{{ configs|selectattr('domain')|selectattr('domain', 'ne', 'No domain')|list|length }}</span>
+                <div class="stat-label">With Domain Analysis</div>
             </div>
             <div class="stat-card">
-                <span class="stat-number">{{ configs|map(attribute='plugins_count')|sum }}</span>
-                <div class="stat-label">Total Plugins Processed</div>
+                <span class="stat-number">{{ configs|map(attribute='plugins_count')|list|max if configs else 0 }}</span>
+                <div class="stat-label">Max Plugins in Config</div>
             </div>
         </div>
         
@@ -232,7 +246,6 @@
                             <th>Generated At</th>
                             <th>Plugins</th>
                             <th>Theme</th>
-                            <th>Ad Providers</th>
                             <th>Size</th>
                             <th>Download</th>
                         </tr>
@@ -263,15 +276,6 @@
                                 <span class="badge">{{ config.plugins_count }} plugins</span>
                             </td>
                             <td>{{ config.theme }}</td>
-                            <td>
-                                {% if config.detected_ad_providers %}
-                                    <div class="ad-providers">
-                                        {{ config.detected_ad_providers|join(', ') }}
-                                    </div>
-                                {% else %}
-                                    <span style="color: #94a3b8;">None</span>
-                                {% endif %}
-                            </td>
                             <td class="file-size">
                                 {% set size_kb = (config.file_size / 1024)|round(1) %}
                                 {{ size_kb }} KB
