@@ -282,7 +282,23 @@ class PerfmattersConfigGenerator:
     
     def _normalize_theme_name(self, theme: str) -> str:
         """Normalize theme name for dictionary lookup"""
-        return theme.lower().replace(' ', '-').replace('_', '-')
+        # Remove version suffixes (e.g., brunchpro-v442 -> brunchpro)
+        theme_normalized = theme.lower().replace(' ', '-').replace('_', '-')
+        
+        # Remove common version patterns
+        import re
+        # Remove patterns like: -v442, -v4.4.2, -version-1.2.3, etc.
+        version_patterns = [
+            r'-v\d+(\.\d+)*$',           # -v442, -v4.4.2
+            r'-version-\d+(\.\d+)*$',    # -version-1.2.3
+            r'-\d+(\.\d+)+$',            # -1.2.3, -4.4.2
+            r'-\d+$'                     # -442, -123
+        ]
+        
+        for pattern in version_patterns:
+            theme_normalized = re.sub(pattern, '', theme_normalized)
+        
+        return theme_normalized
     
     def _is_kadence_theme(self, themes: List[str]) -> bool:
         """Check if any of the themes is Kadence-based"""

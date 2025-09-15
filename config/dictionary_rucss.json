@@ -176,7 +176,7 @@
         "generate-style"
       ]
     },
-    "bunchpro": {
+    "brunchpro": {
       "rucss_excluded_stylesheets": [
         "brunch-pro-theme-css"
       ]

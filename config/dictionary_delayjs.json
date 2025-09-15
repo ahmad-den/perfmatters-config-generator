@@ -351,6 +351,11 @@
       "delay_js_exclusions": [
         "foodie-pro-general-js"
       ]
+    },
+    "brunchpro": {
+      "delay_js_exclusions": [
+        "brunch-pro-theme-js"
+      ]
     }
   }
 }
