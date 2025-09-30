@@ -111,6 +111,13 @@ class PerfmattersConfigGenerator:
         js_universal = self.js_dict.get('universal', {})
         js_exclusions.extend(js_universal.get('js_exclusions', []))
         
+        # Apply compound rules (plugin + theme combinations)
+        self._apply_compound_rules(
+            plugins, themes_to_process, 
+            js_exclusions, delay_js_exclusions, rucss_excluded_stylesheets,
+            rucss_excluded_selectors, minify_css_exclusions, minify_js_exclusions
+        )
+        
         # Analyze domain for ad providers if requested
         if analyze_domain and domain:
             logger.info(f"Analyzing domain for ad providers: {domain}")
@@ -299,6 +306,54 @@ class PerfmattersConfigGenerator:
             theme_normalized = re.sub(pattern, '', theme_normalized)
         
         return theme_normalized
+    
+    def _apply_compound_rules(self, plugins: List[str], themes: List[str],
+                            js_exclusions: List[str], delay_js_exclusions: List[str],
+                            rucss_excluded_stylesheets: List[str], rucss_excluded_selectors: List[str],
+                            minify_css_exclusions: List[str], minify_js_exclusions: List[str]):
+        """Apply compound rules that require specific plugin+theme combinations"""
+        
+        # Normalize plugin and theme names for comparison
+        normalized_plugins = [self._normalize_plugin_name(p) for p in plugins]
+        normalized_themes = [self._normalize_theme_name(t) for t in themes]
+        
+        # Check compound rules in each dictionary
+        dictionaries = [
+            ('rucss', self.rucss_dict),
+            ('delayjs', self.delayjs_dict), 
+            ('js', self.js_dict)
+        ]
+        
+        for dict_name, dictionary in dictionaries:
+            compound_rules = dictionary.get('compound_rules', {})
+            
+            for rule_name, rule_config in compound_rules.items():
+                if self._check_compound_rule(rule_config, normalized_plugins, normalized_themes):
+                    logger.info(f"Applied compound rule: {rule_name} from {dict_name} dictionary")
+                    
+                    # Apply exclusions from this compound rule
+                    js_exclusions.extend(rule_config.get('js_exclusions', []))
+                    delay_js_exclusions.extend(rule_config.get('delay_js_exclusions', []))
+                    rucss_excluded_stylesheets.extend(rule_config.get('rucss_excluded_stylesheets', []))
+                    rucss_excluded_selectors.extend(rule_config.get('rucss_excluded_selectors', []))
+                    minify_css_exclusions.extend(rule_config.get('minify_css_exclusions', []))
+                    minify_js_exclusions.extend(rule_config.get('minify_js_exclusions', []))
+    
+    def _check_compound_rule(self, rule_config: Dict, plugins: List[str], themes: List[str]) -> bool:
+        """Check if a compound rule's conditions are met"""
+        
+        # Check required theme (if specified)
+        required_theme = rule_config.get('required_theme')
+        if required_theme and required_theme not in themes:
+            return False
+        
+        # Check required plugins (all must be present)
+        required_plugins = rule_config.get('required_plugins', [])
+        for required_plugin in required_plugins:
+            if required_plugin not in plugins:
+                return False
+        
+        return True
     
     def _is_kadence_theme(self, themes: List[str]) -> bool:
         """Check if any of the themes is Kadence-based"""

@@ -7,6 +7,15 @@
       "gtm"
     ]
   },
+  "compound_rules": {
+    "kadence+woocommerce": {
+      "required_theme": "kadence",
+      "required_plugins": ["woocommerce"],
+      "delay_js_exclusions": [
+        "kadence-woocommerce-js"
+      ]
+    }
+  },
   "plugins": {
     "borlabs-cookie": {
       "delay_js_exclusions": [

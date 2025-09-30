@@ -4,6 +4,22 @@
       "wp-block-library-css"
     ]
   },
+  "compound_rules": {
+    "kadence+woocommerce": {
+      "required_theme": "kadence",
+      "required_plugins": ["woocommerce"],
+      "rucss_excluded_stylesheets": [
+        "kadence-woocommerce-css"
+      ]
+    },
+    "elementor+woocommerce": {
+      "required_theme": null,
+      "required_plugins": ["elementor", "woocommerce"],
+      "rucss_excluded_stylesheets": [
+        "elementor-woocommerce-css"
+      ]
+    }
+  },
   "plugins": {
     "wp-recipe-maker": {
       "rucss_excluded_stylesheets": [

@@ -7,6 +7,15 @@
       "dataLayer"
     ]
   },
+  "compound_rules": {
+    "kadence+woocommerce": {
+      "required_theme": "kadence",
+      "required_plugins": ["woocommerce"],
+      "js_exclusions": [
+        "kadence-woocommerce-integration"
+      ]
+    }
+  },
   "plugins": {
     "example-plugin": {
       "js_exclusions": [
