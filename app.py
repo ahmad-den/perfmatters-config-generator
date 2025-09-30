@@ -112,6 +112,26 @@ class PerfmattersConfigGenerator:
         js_exclusions.extend(js_universal.get('js_exclusions', []))
         
         # Apply compound rules (plugin + theme combinations)
+        # Process themes (multiple theme support)
+        themes_to_process = []
+        
+        if themes:
+            # Use the themes array if provided
+            themes_to_process = themes
+        else:
+            # Fallback to individual theme fields for backward compatibility
+            if theme_parent:
+                themes_to_process.append(theme_parent)
+            if theme_child and theme_child != theme_parent:
+                themes_to_process.append(theme_child)
+            if not themes_to_process and theme:
+                themes_to_process.append(theme)
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        themes_to_process = [t for t in themes_to_process if not (t in seen or seen.add(t))]
+        
+        # Apply compound rules (plugin + theme combinations)
         self._apply_compound_rules(
             plugins, themes_to_process, 
             js_exclusions, delay_js_exclusions, rucss_excluded_stylesheets,
@@ -149,26 +169,7 @@ class PerfmattersConfigGenerator:
             if js_plugin_settings:
                 js_exclusions.extend(js_plugin_settings.get('js_exclusions', []))
         
-        # Process themes (multiple theme support)
-        themes_to_process = []
-        
-        if themes:
-            # Use the themes array if provided
-            themes_to_process = themes
-        else:
-            # Fallback to individual theme fields for backward compatibility
-            if theme_parent:
-                themes_to_process.append(theme_parent)
-            if theme_child and theme_child != theme_parent:
-                themes_to_process.append(theme_child)
-            if not themes_to_process and theme:
-                themes_to_process.append(theme)
-        
-        # Remove duplicates while preserving order
-        seen = set()
-        themes_to_process = [t for t in themes_to_process if not (t in seen or seen.add(t))]
-        
-        # Process each theme
+        # Process each theme (themes_to_process already defined above)
         for theme_name in themes_to_process:
             # Get RUCSS exclusions for theme
             rucss_theme_settings = self._get_theme_rucss_optimizations(theme_name)
